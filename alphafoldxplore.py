@@ -11,7 +11,6 @@ Original file is located at
 
 import os
 from os import name
-import tensorflow as tf
 import jax
 from IPython.utils import io
 import subprocess
@@ -47,14 +46,15 @@ import seaborn as sns
 
 # Commented out IPython magic to ensure Python compatibility.
 def set_up():
-  #import tensorflow as tf
-  tf.config.set_visible_devices([], 'GPU')
+  if 'COLAB_GPU' in os.environ:
+    import tensorflow as tf
+    tf.config.set_visible_devices([], 'GPU')
 
-  import jax
-  if jax.local_devices()[0].platform == 'tpu':
-    raise RuntimeError('Colab TPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
-  elif jax.local_devices()[0].platform == 'cpu':
-    raise RuntimeError('Colab CPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
+    import jax
+    if jax.local_devices()[0].platform == 'tpu':
+      raise RuntimeError('Colab TPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
+    elif jax.local_devices()[0].platform == 'cpu':
+      raise RuntimeError('Colab CPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
 
   from IPython.utils import io
   import subprocess
@@ -831,10 +831,10 @@ def Pae_results (pae1, pae2): # dos strings con direcciones a archivos pae
   df2=(pae_data[list(pae_data)[1]])
   fig, (ax1, ax2) = plt.subplots(ncols=2)
   fig.subplots_adjust(wspace=0.01)
-  sns.heatmap(df1, cmap="plasma"  , ax=ax1, cbar=False)
-  sns.heatmap(df2, cmap="hot"     , ax=ax2, cbar=False)
+  sns.heatmap(df1, cmap="plasma"  , ax=ax1) #cbar=False
+  sns.heatmap(df2, cmap="hot"     , ax=ax2)
   ax2.yaxis.tick_right()
-  fig.subplots_adjust(wspace=0.001)
+  fig.subplots_adjust(wspace=0.1)
   plt.show()
 
 def plddt_results(plddt1, plddt2):
@@ -995,6 +995,12 @@ def calc_individual_rmsd(p1,p2): #para resultados óptimos, utilizar la proteín
   suma = math.sqrt(suma/len_dist) #Raiz cuadrada de la sumatoria de todas las distancias dividida la longitud de las proteínas
   rmsd_individual = np.array(rmsd_individual)
   rmsd_individual = rmsd_individual.reshape(-1,1)
+  plt.plot(rmsd_individual)
+  plt.legend(loc='lower left')
+  plt.xlabel('Index')
+  plt.ylabel('RMSD')
+  plt.title('Individual RMSD between CA atoms')
+  plt.show()
   for i in range(len(rmsd_individual)):
       print(i + 1)
       print(rmsd_individual[i])
