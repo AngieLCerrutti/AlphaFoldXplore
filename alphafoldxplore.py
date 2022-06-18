@@ -11,7 +11,7 @@ Original file is located at
 
 import os
 from os import name
-import jax
+#import jax
 from IPython.utils import io
 import subprocess
 import tqdm.notebook
@@ -29,6 +29,8 @@ if 'COLAB_GPU' in os.environ:
     from google.colab import files #to download the predictions later if you're on Colab
 import json
 from matplotlib import gridspec
+import zipfile
+from zipfile import ZipFile
 import matplotlib.pyplot as plt
 os.system("pip install biopython")
 os.system("pip install nglview")
@@ -362,8 +364,8 @@ def predict (zfile): #se le pasa la dirección a un archivo FASTA
     if len(full_sequence) > MAX_SEQUENCE_LENGTH:
       raise Exception(f'Input sequence is too long: {len(full_sequence)} amino acids, while the maximum is {MAX_SEQUENCE_LENGTH}. Please use the full AlphaFold system for long sequences.')
 
-    if len(full_sequence) > 1400:
-      print(f"WARNING: For a typical Google-Colab-GPU (16G) session, the max total length is ~1400 residues. You are at {len(full_sequence)}! Run Alphafold may crash.")
+    if len(full_sequence) > 700:
+      print(f"WARNING: For a typical Google-Colab-GPU (12G) session, the max total length is ~700 residues. You are at {len(full_sequence)}! Running Alphafold may cause crashes.")
 
     print(f"homooligomer: '{homooligomer}'")
     print(f"total_length: '{len(full_sequence)}'") #cambie full_sequence
@@ -544,7 +546,7 @@ def predict (zfile): #se le pasa la dirección a un archivo FASTA
     max_recycles = 1 
     tol = 0.1 
     is_training = True 
-    num_samples = 2 
+    num_samples = 1 
     subsample_msa = True 
     
     save_pae_json = False
@@ -812,73 +814,178 @@ def predict (zfile): #se le pasa la dirección a un archivo FASTA
     gc.collect() #free memory to be able to run further iterations
     print(f"Protein finished, proceeding...")
     continue
+  extract_zips()
 
-def Pae_results (pae1, pae2): # dos strings con direcciones a archivos pae
+
+def extract_zips(): #no arguments required
+  with os.scandir(".") as ficheros:
+    for fichero in ficheros:
+      if os.path.isfile(fichero) == True:
+        fichero = os.path.basename(fichero)
+        if fichero.endswith(".zip"):
+          with ZipFile(fichero, 'r') as fz:
+            for zip_info in fz.infolist():
+              if zip_info.filename[-1] == '/':
+                continue
+              tab = os.path.basename(zip_info.filename)
+              if tab.endswith(".json"):
+                zip_info.filename = os.path.basename(zip_info.filename)
+                lista1=fz.extract(zip_info, "archivos_json")         
+                
+          with ZipFile(fichero, 'r') as fz:
+            for zip_info in fz.infolist():
+              if zip_info.filename[-1] == '/':
+                continue
+              tab = os.path.basename(zip_info.filename)
+              if tab.endswith(".pdb"):
+                zip_info.filename = os.path.basename(zip_info.filename)
+                lista2=fz.extract(zip_info, "archivos_pdb") 
+
+def get_pae_files(): #returns a dict with pae data
+  with os.scandir("archivos_json") as ficheros:
+    imagenes={}
+    for fichero in ficheros:
+      if os.path.isfile(fichero) == True:
+        with open(fichero) as f:
+          d=json.load(f)
+          dataf=(pd.DataFrame(d[0]["distance"]))
+          imagenes[os.path.basename(fichero)] = dataf
+        #fin for
+        f.close()
+  return(imagenes)
+
+def Pae_results (pae1, pae2 = 0): # dos strings con direcciones a archivos pae, pae2 es opcional. también admite dataframes
   pae_data={}
-  with open(pae1) as f1, open(pae2) as f2:
+  if type(pae1) == str:
+    str1 = True
+  else:
+    str1 = False
+
+  if type(pae2) == int:
+    pae2_exist = False
+  else:
+    pae2_exist = True
+    if type(pae2) == str:
+      str2 = True
+    else:
+      str2 = False
+
+  if str1:
+    f1 = open(pae1)
     d1=json.load(f1)
-    d2=json.load(f2)
-    dataf1=(pd.DataFrame(d1[0]["distance"]))
-    dataf2=(pd.DataFrame(d2[0]["distance"]))
-    pae_data[os.path.basename(pae1)] = dataf1
-    pae_data[os.path.basename(pae2)] = dataf2
-    #fin for
     f1.close()
-    f2.close()
+    dataf1=(pd.DataFrame(d1[0]["distance"]))
+    pae_data[os.path.basename(pae1)] = dataf1
+  else:
+    pae_data["protein 1"] = pae1 #se asume que es un dataframe json
+
   plt.rcParams["figure.figsize"] = [15, 4]
   plt.rcParams["figure.autolayout"] = True
   df1=(pae_data[list(pae_data)[0]])
-  df2=(pae_data[list(pae_data)[1]])
   fig, (ax1, ax2) = plt.subplots(ncols=2)
-  fig.subplots_adjust(wspace=0.01)
-  sns.heatmap(df1, cmap="plasma"  , ax=ax1) #cbar=False
-  sns.heatmap(df2, cmap="hot"     , ax=ax2)
-  ax2.yaxis.tick_right()
   fig.subplots_adjust(wspace=0.1)
+  sns.heatmap(df1, cmap="plasma"  , ax=ax1) #cbar=False
+  if pae2_exist:
+    if str2:
+      f2 = open(pae2)
+      d2=json.load(f2)
+      f2.close()
+      dataf2=(pd.DataFrame(d2[0]["distance"]))
+      pae_data[os.path.basename(pae2)] = dataf2
+    else:
+      pae_data["Protein 2"] = pae2
+    df2=(pae_data[list(pae_data)[1]])
+    sns.heatmap(df2, cmap="viridis", ax=ax2)
+    ax2.yaxis.tick_right()
   plt.show()
 
-def plddt_results(plddt1, plddt2):
+def get_plddt_files():
+  with os.scandir('archivos_pdb') as ficheros:
+    imagenes={}
+    for fichero in ficheros:
+      if os.path.isfile(fichero) == True:
+        with open(fichero) as fic:
+          df67= pd.DataFrame(fic)
+          dff=df67[0].str.split(expand=True)
+          CAr = dff[2] == "CA" #solo carbonos Alfa usados
+          extCA = dff[CAr][10]
+          imagenes[os.path.basename(fichero)]=extCA
+          fic.close()
+  return(imagenes)
+
+def plddt_results(plddt1, plddt2 = 0):
   plddt_data={}
-  with open(plddt1) as f1, open(plddt2) as f2:
-    df1= pd.DataFrame(f1)
-    dff1=df1[0].str.split(expand=True)
-    CAr1 = dff1[2] == "CA" #solo carbonos Alfa usados
-    extCA1 = dff1[CAr1][10]
-    df2= pd.DataFrame(f2)
-    dff2=df2[0].str.split(expand=True)
-    CAr2 = dff2[2] == "CA" #solo carbonos Alfa usados
-    extCA2 = dff2[CAr2][10]
-    plddt_data[os.path.basename(plddt1)]=extCA1
-    plddt_data[os.path.basename(plddt2)]=extCA2
-    f1.close()
-    f2.close()
+  if type(plddt1) == str:
+    str1 = True
+    label1 = os.path.basename(plddt1)
+  else:
+    str1 = False
+    label1 = 'protein 1'
+
+  if type(plddt2) == int: #el 0 que se le dio 
+    plddt2_exist = False
+  else:
+    plddt2_exist = True
+    if type(plddt2) == str:
+      str2 = True
+      label2 = os.path.basename(plddt2)
+    else:
+      str2 = False
+      label2 = 'protein 2'
+
+  if str1:
+    with open(plddt1) as f1:
+      df1=pd.DataFrame(f1)
+      dff1=df1[0].str.split(expand=True)
+      CAr1 = dff1[2] == "CA" #solo carbonos Alfa usados
+      extCA1 = dff1[CAr1][10]
+      plddt_data[label1]=extCA1
+      f1.close()
+  else:
+    plddt_data[label1]=plddt1
   pay1=[] #primera prot
-  pay2=[] #segunda prot
   for m in plddt_data[list(plddt_data)[0]]:
     l=float(m)
     pay1.append(l)
-  for m in plddt_data[list(plddt_data)[1]]:
-    l=float(m)
-    pay2.append(l)
-    
-  df1 = pd.DataFrame(list(zip(pay1,pay2)), columns = ["m1","m2"])
-  plt.plot(df1['m1'], label=os.path.basename(plddt1))
-  plt.plot(df1['m2'], label=os.path.basename(plddt2))
+
+  if plddt2_exist:
+    if str2:
+      with open(plddt2) as f2:
+        df2= pd.DataFrame(f2)
+        dff2=df2[0].str.split(expand=True)
+        CAr2 = dff2[2] == "CA" #solo carbonos Alfa usados
+        extCA2 = dff2[CAr2][10]
+        plddt_data[label2]=extCA2
+        f2.close()
+    else:
+      plddt_data[label2]=plddt2
+    pay2=[] #segunda prot
+    for m in plddt_data[list(plddt_data)[1]]:
+      l=float(m)
+      pay2.append(l)
+
+  if plddt2_exist:  
+    df1 = pd.DataFrame(list(zip(pay1,pay2)), columns = ["m1","m2"])
+    plt.plot(df1['m1'], label=label1)
+    plt.plot(df1['m2'], label=label2)
+  else:
+    df1 = pd.DataFrame(list(zip(pay1)), columns = ["m1"])
+    plt.plot(df1['m1'], label=label1)
   plt.legend(loc='lower left')
   plt.xlabel('Index')
   plt.ylabel('pLDDT%')
   plt.title('pLDDT comparation between predictions')
   plt.show()
 
-def watch_proteins(p1,p2): #se le pasan dos pdb, función simple
+def watch_proteins(p1,p2 = 0): #se le pasan dos pdb, función simple
   view = nv.show_file(p1)
-  view.add_component(p2)
+  if type(p2) != int:
+    view.add_component(p2)
   return view
 
 def superimpose_proteins(p1,p2): #Superposición de proteínas
   #Agradecimientos a Anders Steen Christensen por el código: https://gist.github.com/andersx/6354971
   pdb_parser = Bio.PDB.PDBParser() # Iniciar el parser
-
   # Conseguir las estructuras
   ref_structure = pdb_parser.get_structure("reference", p1) 
   sample_structure = pdb_parser.get_structure("sample", p2)
@@ -915,7 +1022,7 @@ def superimpose_proteins(p1,p2): #Superposición de proteínas
   super_imposer.apply(sample_structure.get_atoms()) #afecta a la estructura original
 
   # Impresión del RMSD:
-  print('El RMSD promedio es de:')
+  print('Mean RMSD from the superimposition is:')
   print (str(super_imposer.rms) + ' Å')
 
   # Almacenar la versión alineada de la proteína de ejemplo
@@ -929,7 +1036,8 @@ def superimpose_proteins(p1,p2): #Superposición de proteínas
   view.add_component(p1)
   view
 
-def calc_individual_rmsd(p1,p2): #para resultados óptimos, utilizar la proteína superpuesta como parámetro en p2
+def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, utilizar la proteína superpuesta como parámetro en p2
+ #devuelve la lista con rmsd
 
   #Para calcular el RMSD de carbonos individuales, es necesario extraer las coordenadas de ellos primero
 
@@ -976,11 +1084,14 @@ def calc_individual_rmsd(p1,p2): #para resultados óptimos, utilizar la proteín
       sample_atoms_coords = np.append(sample_atoms_coords, np.array([atom.get_coord()]), axis=0)
       
   #calcular la distancia euclidiana/RMSD de carbonos individuales (y también el total para corroborar)
+  if end == 0: #si no se pasó el parámetro de end:
+   end = len(ref_atoms_coords)
   i=0
   distancia_euclidiana=[] #Lista con las distancias, que será usada luego para el RMSD total
   rmsd_individual=[] #Lista que contendrá las RMSD entre pares de carbonos individualmente
   for atom in ref_atoms_coords:
-      distancia_euclidiana.append((atom[0] - sample_atoms_coords[i][0]) * (atom[0] - sample_atoms_coords[i][0]) + (atom[1] - sample_atoms_coords[i][1]) * (atom[1] - sample_atoms_coords[i][1]) + (atom[2] - sample_atoms_coords[i][2]) * (atom[2] - sample_atoms_coords[i][2]))
+      if i > start and i < end:
+        distancia_euclidiana.append((atom[0] - sample_atoms_coords[i][0]) * (atom[0] - sample_atoms_coords[i][0]) + (atom[1] - sample_atoms_coords[i][1]) * (atom[1] - sample_atoms_coords[i][1]) + (atom[2] - sample_atoms_coords[i][2]) * (atom[2] - sample_atoms_coords[i][2]))
       i = i + 1
       #En equivalencia: sumatoria de (Xip1 - Xip2)^2 donde i se refiere al index de los carbonos
   distancia_euclidiana = np.array(distancia_euclidiana)
@@ -995,14 +1106,12 @@ def calc_individual_rmsd(p1,p2): #para resultados óptimos, utilizar la proteín
   suma = math.sqrt(suma/len_dist) #Raiz cuadrada de la sumatoria de todas las distancias dividida la longitud de las proteínas
   rmsd_individual = np.array(rmsd_individual)
   rmsd_individual = rmsd_individual.reshape(-1,1)
-  plt.plot(rmsd_individual)
-  plt.legend(loc='lower left')
+  plt.plot(rmsd_individual, label=f"{os.path.basename(p1)} + {os.path.basename(p2)}")
+  plt.legend(loc='upper left')
   plt.xlabel('Index')
   plt.ylabel('RMSD')
   plt.title('Individual RMSD between CA atoms')
   plt.show()
-  for i in range(len(rmsd_individual)):
-      print(i + 1)
-      print(rmsd_individual[i])
-  print("RMSD de ambas proteínas:")
-  print(suma) #el rmsd total según la formula, ahora dando tal como en los otros métodos
+  print("Mean RMSD:")
+  print(str(suma) + ' Å') #el rmsd total según la formula, ahora dando tal como en los otros métodos
+  return rmsd_individual
