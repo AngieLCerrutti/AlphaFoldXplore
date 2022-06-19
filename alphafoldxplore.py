@@ -11,7 +11,7 @@ Original file is located at
 
 import os
 from os import name
-#import jax
+import jax
 from IPython.utils import io
 import subprocess
 import tqdm.notebook
