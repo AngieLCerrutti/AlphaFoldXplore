@@ -64,3 +64,26 @@ calc_individual_rmsd(protein_1,protein_2,start,end)
 #Returns a list with the values per CA pair.
 ```
 
+## Documentation
+For more details, see the [AlphaFold documentation](https://github.com/deepmind/alphafold).
+
+If you have a question, please open an issue.
+
+## Authors
+
+- Elmer Andrés Fernández - Original Idea - [Profile](https://www.researchgate.net/profile/Elmer-Fernandez-2) - [CIDIE]- [CONICET](https://www.conicet.gov.ar) - [UCC](http://www.ucc.edu.ar).
+- Juan Ignacio Folco - Bioinformátic - Universidad Católica de Córdoba.
+- Angie Lucia Cerrutti -  Bioinformátic - Universidad Católica de Córdoba.
+- Veronica Baronetto - Advice - Universidad Católica de Córdoba.
+- Pablo Pastore - Advice - Universidad Católica de Córdoba.
+
+
+## Contributing
+
+To *contribute*, do the following:
+
+Open an issue to discuss possible changes or ask questions
+Create a *fork* of the project
+Create a new *branch* and push your changes
+Create a *pull request*
+
