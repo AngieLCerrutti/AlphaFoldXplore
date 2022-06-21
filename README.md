@@ -32,6 +32,15 @@ chmod +x alphafoldxplore
 ```
 ## API
 
+### Requisites
+
+* ``` python >= 3.7 ```
+* ``` biopython >= 1.79 ```
+* ``` nglview >= 3.0.3 ```
+* ``` jax >= 0.3.8 ```
+* ``` tqdm >= 4.64.0 ```
+* ``` numpy ```
+* ``` seaborn ```
 ### Functions
 
 ```python
