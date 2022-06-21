@@ -23,8 +23,6 @@ from matplotlib import gridspec
 import zipfile
 from zipfile import ZipFile
 import matplotlib.pyplot as plt
-os.system("pip install biopython")
-os.system("pip install nglview")
 import Bio
 from Bio import PDB
 import ipywidgets as widget
@@ -808,8 +806,8 @@ def predict (zfile): #se le pasa la dirección a un archivo FASTA
   extract_zips()
 
 
-def extract_zips(): #no arguments required
-  with os.scandir(".") as ficheros:
+def extract_zips(dir="."):
+  with os.scandir(dir) as ficheros:
     for fichero in ficheros:
       if os.path.isfile(fichero) == True:
         fichero = os.path.basename(fichero)
