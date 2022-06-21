@@ -1,9 +1,12 @@
 # AlphaFoldXplore
 
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AngieLCerrutti/AlphaFoldXplore/blob/main/example/AlphaFoldXplore_example.ipynb)
+Alphafold is a software that has the ability to predict protein structures with an almost experimental accuracy in most cases, but it requires a lot of computational resources such as GPU and CPU, for this reason adaptations were made and the software was able to run optimizing the resources.
+How did we do this? We took out the graphical interface and put the default commands, then the code is basically executed and separately the functions were created so that the user can plot what he wants (protein drawing, pLDDT and pae). After that we also created another function that tells you how much deviation there is between two proteins (RMSD). Finally, when you enter a compressed multifasta file it is optimized to run automatically.
 
+![prot](https://user-images.githubusercontent.com/62774640/174698354-a814f773-cd13-4d71-9192-04147fd29b64.jpeg)
 
-## Usage
+## Uso
 
 Install alphafoldxplore.py on a folder without anything else.
 
@@ -38,12 +41,19 @@ pae_results(protein_1,protein_2)
 #Compares the PAE values of two proteins by reading .json files and creating heatmaps. Protein_2 is optional.
 #Admits both strings and entries from the get_pae_files() dictionary.
 #Prints heatmaps.
+```
+![pae](https://user-images.githubusercontent.com/62774640/174699169-3e1f19b3-2ac4-41db-afed-71db8fd18c79.jpeg)
 
+```
 plddt_results(protein_1,protein_2)
 #Compares the pLDDT values of two proteins by reading .pdb files and plotting values of all CA atoms. Protein_2 is optional.
 #Admits both strings and entries from the get_plddt_files() dictionary.
 #Prints a plot.
+```
+![plddt](https://user-images.githubusercontent.com/62774640/174700466-921443d1-bee0-4a91-aa85-98b66b558242.jpeg)
 
+
+```
 watch_proteins(protein_1, protein_2)
 #Doesn't work on Colab.
 #Creates a widget and allows the visualization of protein structures by reading .pdb files. Protein_2 is optional.
@@ -63,6 +73,7 @@ calc_individual_rmsd(protein_1,protein_2,start,end)
 #Plots the result and prints the mean RMSD.
 #Returns a list with the values per CA pair.
 ```
+![rsmd](https://user-images.githubusercontent.com/62774640/174699787-d526c0d6-26d7-4ec4-93a2-d0762e1af301.jpeg)
 
 ## Documentation
 For more details, see the [AlphaFold documentation](https://github.com/deepmind/alphafold).
