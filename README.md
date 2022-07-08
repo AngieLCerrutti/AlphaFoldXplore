@@ -81,12 +81,6 @@ plddt_results(protein_1,protein_2)
 
 
 ```python
-watch_proteins(protein_1, protein_2)
-#Doesn't work on Colab.
-#Creates a widget and allows the visualization of protein structures by reading .pdb files. Protein_2 is optional.
-#Admits strings.
-#Returns a NGLView view.
-
 superimpose_proteins(protein_1,protein_2)
 #Rotates and translates the molecular structure of protein_2 to superimpose (match) it with protein_1.
 #Both proteins must be of the same length for it to work properly.
