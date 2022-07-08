@@ -2,6 +2,7 @@
 
 A simple program to simplify the use of [AlphaFold](https://github.com/deepmind/alphafold), visualization of protein structures and other metrics for the end user.
 
+Only for Colab as of the current version.
 
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AngieLCerrutti/AlphaFoldXplore/blob/main/example/AlphaFoldXplore_example.ipynb)
 
@@ -36,7 +37,6 @@ chmod +x alphafoldxplore
 
 * ``` python >= 3.7 ```
 * ``` biopython >= 1.79 ```
-* ``` nglview >= 3.0.3 ```
 * ``` jax >= 0.3.8 ```
 * ``` tqdm >= 4.64.0 ```
 * ``` numpy ```

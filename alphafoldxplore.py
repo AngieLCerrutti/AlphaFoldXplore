@@ -2,6 +2,10 @@
 
 import os
 from os import name
+if 'COLAB_GPU' in os.environ:
+  from google.colab import files #to download the predictions later if you're on Colab
+else:
+  raise RuntimeError('Non-Colab devices not supported. Please install AlphaFoldXplore on a Colab machine.')
 import jax
 from IPython.utils import io
 import subprocess
@@ -16,8 +20,6 @@ if "/content/tmp/bin" not in os.environ['PATH']:
 
 from urllib import request
 from concurrent import futures
-if 'COLAB_GPU' in os.environ:
-    from google.colab import files #to download the predictions later if you're on Colab
 import json
 from matplotlib import gridspec
 import zipfile
@@ -28,7 +30,6 @@ from Bio import PDB
 import ipywidgets as widget
 from Bio.PDB.PDBParser import PDBParser
 import math
-import nglview as nv
 import numpy as np
 import gc #free memory resources, unrelated to AlphaFold
 import time #to pause, unrelated to AlphaFold
@@ -134,7 +135,6 @@ def set_up():
   import ipywidgets as widget
   from Bio.PDB.PDBParser import PDBParser
   import math
-  import nglview as nv
   import numpy as np
   import py3Dmol
   import gc #free memory resources, unrelated to AlphaFold
@@ -966,12 +966,6 @@ def plddt_results(plddt1, plddt2 = 0):
   plt.title('pLDDT comparation between predictions')
   plt.show()
 
-def watch_proteins(p1,p2 = 0): #se le pasan dos pdb, función simple
-  view = nv.show_file(p1)
-  if type(p2) != int:
-    view.add_component(p2)
-  return view
-
 def superimpose_proteins(p1,p2): #Superposición de proteínas
   #Agradecimientos a Anders Steen Christensen por el código: https://gist.github.com/andersx/6354971
   pdb_parser = Bio.PDB.PDBParser() # Iniciar el parser
@@ -1020,10 +1014,6 @@ def superimpose_proteins(p1,p2): #Superposición de proteínas
   i = 0
   io.set_structure(sample_structure) 
   io.save(f"superimposed_{os.path.basename(p2)}.pdb")
-
-  view = nv.show_file(f"superimposed_{os.path.basename(p2)}.pdb")
-  view.add_component(p1)
-  view
 
 def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, utilizar la proteína superpuesta como parámetro en p2
  #devuelve la lista con rmsd
