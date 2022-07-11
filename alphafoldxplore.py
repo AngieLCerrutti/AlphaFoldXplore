@@ -32,10 +32,12 @@ from Bio.PDB.PDBParser import PDBParser
 import math
 import numpy as np
 import gc #free memory resources, unrelated to AlphaFold
-import time #to pause, unrelated to AlphaFold
+import time
 import pandas as pd
 import seaborn as sns
 
+
+  
 # Commented out IPython magic to ensure Python compatibility.
 def set_up():
   if 'COLAB_GPU' in os.environ:
@@ -146,26 +148,28 @@ def set_up():
 
   from alphafold.data import parsers
   from alphafold.data import pipeline
-  from alphafold.data.tools import jackhmmer
 
   from alphafold.common import protein
 
+class prediction_result:
+  def __init__(self):
+    print("alive")
+    self.dirdict = {}
 
-def predict (zfile): #se le pasa la dirección a un archivo FASTA
+  def add_entry(self, name, data):
+    self.dirdict[name] = data
+
+
+def predict(zfile): #se le pasa la dirección a un archivo FASTA
   TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
   import colabfold as cf
   from alphafold.data import pipeline
-  from alphafold.data.tools import jackhmmer
-
   from alphafold.common import protein
   from alphafold.data import parsers
   import alphafold.model #reimportando lo que no se podía aimportar al principio por tener que descargar AlphaFold
   from alphafold.model import model
   from alphafold.model import config
   from alphafold.model import data
-
-  from alphafold.data import pipeline
-  from alphafold.data.tools import jackhmmer
   from collections import defaultdict
   d = defaultdict(str)
   with open(zfile, "r") as file1:
@@ -178,7 +182,16 @@ def predict (zfile): #se le pasa la dirección a un archivo FASTA
   file1.close()
   
   seque= []
+  class prediction_result:
+    def __init__(self):
+      print("alive")
+      self.dirdict = {}
+
+    def add_entry(self, name, data):
+      self.dirdict[name] = data
+  Z = prediction_result()
   for sec in d.items():
+    start = time.time()
     import re
 
     # define sequence
@@ -673,6 +686,13 @@ def predict (zfile): #se le pasa la dirección a un archivo FASTA
       #for n,key in enumerate(model_rank):
       #print(f"rank_{n+1}_{key} {rank_by}:{outs[key][rank_by]:.2f}")
 
+    stop = time.time()
+    prediction_entry = {}
+    prediction_entry['pae'] = pae_output_path
+    prediction_entry['plddt'] = pred_output_path
+    prediction_entry['time'] = stop - start
+    
+    Z.add_entry(output_dir, prediction_entry)
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
     files.download(f'{output_dir}.zip')
 
@@ -681,6 +701,7 @@ def predict (zfile): #se le pasa la dirección a un archivo FASTA
     print(f"Protein finished, proceeding...")
     continue
   extract_zips()
+  return Z
 
 
 def extract_zips(dir="."):
