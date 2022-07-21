@@ -51,7 +51,6 @@ def set_up():
       raise RuntimeError('Colab CPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
 
   from IPython.utils import io
-  import subprocess
   import tqdm.notebook
 
   GIT_REPO = 'https://github.com/deepmind/alphafold'
@@ -198,7 +197,11 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
     #sequence = "\"sequence\"" #@param {type:"string"}
     #sequence = d.values()
     sequence= (str(sec[1]))
-    jobname = (str(sec[0]))
+    jobname = (sec[0])
+    jobname = jobname.replace("/","") # forbidden characters
+    jobname = jobname.replace("\\","")
+    og_jobname = jobname
+    jobname = (str(jobname))
     sequence = re.sub("[^A-Z:/]", "", sequence.upper())
     sequence = re.sub(":+",":",sequence)
     sequence = re.sub("/+","/",sequence)
@@ -239,6 +242,8 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
     # prediction directory
     
     output_dir ='prediction_'+sec[0].replace(" ", "")+'_'+cf.get_hash(full_sequence)[:5]
+    output_dir = output_dir.replace("/","") # forbidden characters
+    output_dir = output_dir.replace("\\","")
     os.makedirs(output_dir, exist_ok=True)
     # delete existing files in working directory
     for f in os.listdir(output_dir):
@@ -650,7 +655,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
       # Write out the prediction
       for n,key in enumerate(model_rank):
         prefix = f"rank_{n+1}_{key}" 
-        pred_output_path = os.path.join(output_dir,f'{sec[0]}_unrelaxed.pdb')
+        pred_output_path = os.path.join(output_dir,f'{og_jobname}_unrelaxed.pdb')
         #fig = cf.plot_protein(outs[key]["unrelaxed_protein"], Ls=Ls_plot, dpi=200)
         #plt.savefig(os.path.join(output_dir,f'{prefix}.png'), bbox_inches = 'tight')
         #plt.close(fig)
@@ -665,7 +670,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
     for n,key in enumerate(model_rank):    
         pae = outs[key]["pae"]
         max_pae = pae.max()
-        pae_output_path = os.path.join(output_dir,f'{sec[0]}_pae.json')
+        pae_output_path = os.path.join(output_dir,f'{og_jobname}_pae.json')
         rounded_errors = np.round(np.array(pae), decimals= 1)
         indices = np.indices((len(rounded_errors), len(rounded_errors))) + 1
         indices_1 = indices[0].flatten().tolist()
@@ -691,6 +696,10 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
     prediction_entry['pae'] = pae_output_path
     prediction_entry['plddt'] = pred_output_path
     prediction_entry['time'] = stop - start
+    machine_info = subprocess.run(
+        ["nvidia-smi", "--query-gpu=name,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used", "--format=csv,noheader"],
+        encoding="utf-8", capture_output=True).stdout
+    prediction_entry['machine_details'] = machine_info
     
     Z.add_entry(output_dir, prediction_entry)
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
