@@ -36,9 +36,6 @@ import time
 import pandas as pd
 import seaborn as sns
 
-
-  
-# Commented out IPython magic to ensure Python compatibility.
 def set_up():
   if 'COLAB_GPU' in os.environ:
     import tensorflow as tf
@@ -118,48 +115,11 @@ def set_up():
     raise
 
   ########################################################################################
-  # --- Python imports ---
-  import colabfold as cf
-  import pairmsa
-  import sys
-  import pickle
-
   if "/content/tmp/bin" not in os.environ['PATH']:
     os.environ['PATH'] += ":/content/tmp/bin:/content/tmp/scripts"
 
-  from urllib import request
-  from concurrent import futures
-  import json
-  from matplotlib import gridspec
-  import matplotlib.pyplot as plt
-  from Bio import PDB
-  import ipywidgets as widget
-  from Bio.PDB.PDBParser import PDBParser
-  import math
-  import numpy as np
-  import py3Dmol
-  import gc #free memory resources, unrelated to AlphaFold
-  import time #to pause, unrelated to AlphaFold
-
-  from alphafold.model import model
-  from alphafold.model import config
-  from alphafold.model import data
-
-  from alphafold.data import parsers
-  from alphafold.data import pipeline
-
-  from alphafold.common import protein
-
-class prediction_result:
-  def __init__(self):
-    print("alive")
-    self.dirdict = {}
-
-  def add_entry(self, name, data):
-    self.dirdict[name] = data
-
-
 def predict(zfile): #se le pasa la dirección a un archivo FASTA
+  protein_count = 0
   TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
   import colabfold as cf
   from alphafold.data import pipeline
@@ -181,15 +141,55 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
   file1.close()
   
   seque= []
-  class prediction_result:
-    def __init__(self):
-      print("alive")
-      self.dirdict = {}
+  class prediction_results:
+    def __init__(self, a=None, b=None, c=None, d=None):
+      self.name = a
+      self.directory = b
+      self.time = c
+      self.machine_details = d
 
-    def add_entry(self, name, data):
-      self.dirdict[name] = data
-  Z = prediction_result()
+    def add_name(self, x):
+      self.name = x
+
+    def add_dir(self, x):
+      self.directory = x
+    
+    def add_time(self, x):
+      self.time = x
+
+    def add_machine_details(self, x):
+      self.machine_details = x
+
+    def plot_pae(self, p2=None): #p2 must be another prediction_results object
+      clean()
+      extract_zip(self.directory)
+      pae_file1 = get_pae_files()
+      if p2:
+        clean()
+        extract_zip(p2.directory)
+        pae_file2 = get_pae_files()
+        pae_results(pae_file1[list(pae_file1)[0]],pae_file2[list(pae_file2)[0]])
+      else:
+        pae_results(pae_file[list(pae_file)[0]])
+      clean()
+
+    def plot_plddt(self, p2=None) #p2 must be another prediction_results object
+      clean()
+      extract_zip(self.directory)
+      plddt_file1 = get_plddt_files()
+      if p2:
+        clean()
+        extract_zip(p2.directory)
+        plddt_file2 = get_plddt_files()
+        plddt_results(plddt_file1[list(plddt_file1)[0]],plddt_file2[list(plddt_file2)[0]])
+      else:
+        plddt_results(plddt_file1[list(plddt_file1)[0]])
+      clean()
+
+
+  Z = {}
   for sec in d.items():
+    protein_count = protein_count + 1
     start = time.time()
     import re
 
@@ -260,8 +260,8 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
     if len(full_sequence) > MAX_SEQUENCE_LENGTH:
       raise Exception(f'Input sequence is too long: {len(full_sequence)} amino acids, while the maximum is {MAX_SEQUENCE_LENGTH}. Please use the full AlphaFold system for long sequences.')
 
-    if len(full_sequence) > 700:
-      print(f"WARNING: For a typical Google-Colab-GPU (12G) session, the max total length is ~700 residues. You are at {len(full_sequence)}! Running Alphafold may cause crashes.")
+    if len(full_sequence) >= 650:
+      print(f"WARNING: For a typical Google-Colab-GPU (12G) session, the max total length is ~650 residues. You are at {len(full_sequence)}! Running Alphafold may cause crashes.")
 
     print(f"homooligomer: '{homooligomer}'")
     print(f"total_length: '{len(full_sequence)}'") 
@@ -692,28 +692,25 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
       #print(f"rank_{n+1}_{key} {rank_by}:{outs[key][rank_by]:.2f}")
 
     stop = time.time()
-    prediction_entry = {}
-    prediction_entry['pae'] = pae_output_path
-    prediction_entry['plddt'] = pred_output_path
-    prediction_entry['time'] = stop - start
+    protein_name = str(og_jobname)
+    directory = f'{output_dir}.zip'
+    time_spent = stop - start
     machine_info = subprocess.run(
         ["nvidia-smi", "--query-gpu=name,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used", "--format=csv,noheader"],
         encoding="utf-8", capture_output=True).stdout
-    prediction_entry['machine_details'] = machine_info
-    
-    Z.add_entry(output_dir, prediction_entry)
+    prediction_entry = prediction_results(protein_name,directory,time_spent,machine_info)
+    Z[f'p{protein_count}'] = prediction_entry
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
     files.download(f'{output_dir}.zip')
-
 
     gc.collect() #free memory to be able to run further iterations
     print(f"Protein finished, proceeding...")
     continue
-  extract_zips()
+  #extract_zips()
   return Z
 
 
-def extract_zips(dir="."):
+def extract_zips(dir="."): #whole directory inputted
   with os.scandir(dir) as ficheros:
     for fichero in ficheros:
       if os.path.isfile(fichero) == True:
@@ -726,16 +723,34 @@ def extract_zips(dir="."):
               tab = os.path.basename(zip_info.filename)
               if tab.endswith(".json"):
                 zip_info.filename = os.path.basename(zip_info.filename)
-                lista1=fz.extract(zip_info, "json_files")         
-                
-          with ZipFile(fichero, 'r') as fz:
-            for zip_info in fz.infolist():
-              if zip_info.filename[-1] == '/':
-                continue
-              tab = os.path.basename(zip_info.filename)
-              if tab.endswith(".pdb"):
+                fz.extract(zip_info, "json_files")         
+              elif tab.endswith(".pdb"):
                 zip_info.filename = os.path.basename(zip_info.filename)
-                lista2=fz.extract(zip_info, "pdb_files") 
+                fz.extract(zip_info, "pdb_files") 
+
+def extract_zip(dir): #singular, zip string as parameter, must end in .zip
+  if dir.endswith(".zip"):
+    with ZipFile(dir, 'r') as fz:
+      for zip_info in fz.infolist():
+        if zip_info.filename[-1] == '/':
+          continue
+        tab = os.path.basename(zip_info.filename)
+        if tab.endswith(".json"):
+          zip_info.filename = os.path.basename(zip_info.filename)
+          fz.extract(zip_info, "json_files")         
+        elif tab.endswith(".pdb"):
+          zip_info.filename = os.path.basename(zip_info.filename)
+          fz.extract(zip_info, "pdb_files")
+  else:
+    print("Could not extract. Zip file not found")
+
+def clean():
+  import shutil
+  try:
+    shutil.rmtree('json_files')
+    shutil.rmtree('pdb_files')
+  except:
+    pass
 
 def get_pae_files(dir = "json_files"): #returns a dict with pae data
   with os.scandir(dir) as ficheros:
@@ -746,7 +761,6 @@ def get_pae_files(dir = "json_files"): #returns a dict with pae data
           d=json.load(f)
           dataf=(pd.DataFrame(d[0]["distance"]))
           imagenes[os.path.basename(fichero)] = dataf
-        #fin for
         f.close()
   return(imagenes)
 
@@ -791,7 +805,7 @@ def pae_results (pae1, pae2 = 0): # dos strings con direcciones a archivos pae, 
     else:
       pae_data["Protein 2"] = pae2
     df2=(pae_data[list(pae_data)[1]])
-    sns.heatmap(df2, cmap="viridis", ax=ax2)
+    sns.heatmap(df2, cmap="plasma", ax=ax2)
     ax2.yaxis.tick_right()
   plt.show()
 
