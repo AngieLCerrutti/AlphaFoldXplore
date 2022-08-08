@@ -142,7 +142,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
   
   seque= []
   class prediction_results:
-    def __init__(self, a=None, b=None, c=None, d=None):
+    def __init__(self, a=None, b=None, c=0, d=None):
       self.name = a
       self.directory = b
       self.time = c
@@ -170,10 +170,10 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
         pae_file2 = get_pae_files()
         pae_results(pae_file1[list(pae_file1)[0]],pae_file2[list(pae_file2)[0]])
       else:
-        pae_results(pae_file[list(pae_file)[0]])
+        pae_results(pae_file1[list(pae_file1)[0]])
       clean()
 
-    def plot_plddt(self, p2=None) #p2 must be another prediction_results object
+    def plot_plddt(self, p2=None): #p2 must be another prediction_results object
       clean()
       extract_zip(self.directory)
       plddt_file1 = get_plddt_files()
@@ -185,6 +185,22 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
       else:
         plddt_results(plddt_file1[list(plddt_file1)[0]])
       clean()
+    
+    def fit(self, p2): #p2 is fit to p1
+      clean()
+      extract_zip(self.directory)
+      extract_zip(p2.directory)
+      new_directory = superimpose_proteins(f"pdb_files/{p1.directory}",f"pdb_files/{p2.directory}")
+      clean()
+      os.system(f"zip -FS {new_directory[:-4]}.zip {new_directory}")
+      return prediction_results(f"Superimposed {p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
+
+    def rmsd(self, p2, start=0, end=0):
+      clean()
+      extract_zip(self.directory)
+      extract_zip(p2.directory)
+      return calc_individual_rmsd(f"pdb_files/{p1.directory}",f"pdb_files/{p2.directory}", start, end)
+
 
 
   Z = {}
@@ -744,7 +760,7 @@ def extract_zip(dir): #singular, zip string as parameter, must end in .zip
   else:
     print("Could not extract. Zip file not found")
 
-def clean():
+def clean(): #erases the folders by extract_zip and so. Meant to be used silently by the script.
   import shutil
   try:
     shutil.rmtree('json_files')
@@ -934,7 +950,9 @@ def superimpose_proteins(p1,p2): #Superposición de proteínas
 
   i = 0
   io.set_structure(sample_structure) 
-  io.save(f"superimposed_{os.path.basename(p2)}.pdb")
+  og_name = os.path.basename(p2)
+  io.save(f"superimposed_{og_name[:-4]}.pdb")
+  return f"superimposed_{og_name[:-4]}.pdb"
 
 def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, utilizar la proteína superpuesta como parámetro en p2
  #devuelve la lista con rmsd

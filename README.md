@@ -50,7 +50,8 @@ set_up()
 predict(dir_string)
 #Does not work without running set_up() beforehand.
 #Predicts the terciary structure of a single protein (or a group of them) by reading a FASTA file.
-#Simplified to default parameters to speed up the process. Creates two folders 'json_files' and 'pdb_files' with the results inside.
+#Simplified to default parameters to speed up the process. 
+#Returns a dictionary with the predicted results inside in form of objects. (how to use them is pending)
 
 extract_zips(dir_string)
 #Unneeded to use normally. 
@@ -87,6 +88,7 @@ superimpose_proteins(protein_1,protein_2)
 #Creates a .pdb file on the root folder named "superimposed_{filename}.pdb".
 #Admits strings.
 #Prints the mean RMSD.
+#Returns the name of the new PDB file created.
 
 calc_individual_rmsd(protein_1,protein_2,start,end)
 #Calculates the individual RMSD (Root mean-square deviation) between CA atoms of both proteins.
@@ -94,12 +96,27 @@ calc_individual_rmsd(protein_1,protein_2,start,end)
 #Plots the result and prints the mean RMSD.
 #Returns a list with the values per CA pair.
 ```
+
+```python
+#As for the predicted methods object, its methods are:
+
+plot_pae(optional_object_for_comparison)
+
+plot_plddt(optional_object_for_comparison)
+
+fit(sample_object)
+
+rmsd(sample_object,start,end)
+```
 ![rmsd](https://user-images.githubusercontent.com/62774640/174699787-d526c0d6-26d7-4ec4-93a2-d0762e1af301.jpeg)
 
 ## Documentation
-For more details, see the [AlphaFold documentation](https://github.com/deepmind/alphafold).
 
-If you have a question, please open an issue.
+AlphaFoldXplore can be ran infinitely, or rather, as long as Collab allows you to do so uninterrupted. Hence the usefulness in dropping a long multiFASTA file for it to do its work.
+
+Please note that AlphaFoldXplore will only predict properly sequences of up to 650 residues on a free Colab machine. Using longer sequences with those resources is very likely to crash your session (and for now, lose all your results).
+
+For more details, see the [AlphaFold documentation](https://github.com/deepmind/alphafold).
 
 ## Authors
 
