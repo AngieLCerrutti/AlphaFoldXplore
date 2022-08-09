@@ -190,7 +190,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
       clean()
       extract_zip(self.directory)
       extract_zip(p2.directory)
-      new_directory = superimpose_proteins(f"pdb_files/{p1.directory}",f"pdb_files/{p2.directory}")
+      new_directory = superimpose_proteins(f"pdb_files/{self.directory}",f"pdb_files/{p2.directory}")
       clean()
       os.system(f"zip -FS {new_directory[:-4]}.zip {new_directory}")
       return prediction_results(f"Superimposed {p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
