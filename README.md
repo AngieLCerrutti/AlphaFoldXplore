@@ -26,9 +26,10 @@ and then import the module with:
 from AlphaFoldXplore import alphafoldxplore
 ```
 
-Otherwise, since the module is a single _.py_ file, you can download it alone on your folder of choice:
+Otherwise, since the module is nothing but a few _.py_ files, you can download them alone on your folder of choice:
 ```
 wget -O alphafoldxplore https://github.com/AngieLCerrutti/AlphaFoldXplore/blob/main/alphafoldxplore.py
+wget -O alphafoldxplore https://github.com/AngieLCerrutti/AlphaFoldXplore/blob/main/prediction_results.py
 chmod +x alphafoldxplore
 ```
 ## API

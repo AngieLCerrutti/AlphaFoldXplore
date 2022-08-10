@@ -13,6 +13,7 @@ import tqdm.notebook
 import json
 #-------------------
 import sys
+sys.path.insert(1, 'AlphaFoldXplore')
 import pickle
 
 if "/content/tmp/bin" not in os.environ['PATH']:
@@ -35,6 +36,8 @@ import gc #free memory resources, unrelated to AlphaFold
 import time
 import pandas as pd
 import seaborn as sns
+from datetime import datetime
+from prediction_results import prediction_results
 
 def set_up():
   if 'COLAB_GPU' in os.environ:
@@ -141,68 +144,6 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
   file1.close()
   
   seque= []
-  class prediction_results:
-    def __init__(self, a=None, b=None, c=0, d=None):
-      self.name = a
-      self.directory = b
-      self.time = c
-      self.machine_details = d
-
-    def add_name(self, x):
-      self.name = x
-
-    def add_dir(self, x):
-      self.directory = x
-    
-    def add_time(self, x):
-      self.time = x
-
-    def add_machine_details(self, x):
-      self.machine_details = x
-
-    def plot_pae(self, p2=None): #p2 must be another prediction_results object
-      clean()
-      extract_zip(self.directory)
-      pae_file1 = get_pae_files()
-      if p2:
-        clean()
-        extract_zip(p2.directory)
-        pae_file2 = get_pae_files()
-        pae_results(pae_file1[list(pae_file1)[0]],pae_file2[list(pae_file2)[0]])
-      else:
-        pae_results(pae_file1[list(pae_file1)[0]])
-      clean()
-
-    def plot_plddt(self, p2=None): #p2 must be another prediction_results object
-      clean()
-      extract_zip(self.directory)
-      plddt_file1 = get_plddt_files()
-      if p2:
-        clean()
-        extract_zip(p2.directory)
-        plddt_file2 = get_plddt_files()
-        plddt_results(plddt_file1[list(plddt_file1)[0]],plddt_file2[list(plddt_file2)[0]])
-      else:
-        plddt_results(plddt_file1[list(plddt_file1)[0]])
-      clean()
-    
-    def fit(self, p2): #p2 is fit to p1
-      clean()
-      extract_zip(self.directory)
-      extract_zip(p2.directory)
-      new_directory = superimpose_proteins(f"pdb_files/{self.directory}",f"pdb_files/{p2.directory}")
-      clean()
-      os.system(f"zip -FS {new_directory[:-4]}.zip {new_directory}")
-      return prediction_results(f"Superimposed {p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
-
-    def rmsd(self, p2, start=0, end=0):
-      clean()
-      extract_zip(self.directory)
-      extract_zip(p2.directory)
-      return calc_individual_rmsd(f"pdb_files/{p1.directory}",f"pdb_files/{p2.directory}", start, end)
-
-
-
   Z = {}
   for sec in d.items():
     protein_count = protein_count + 1
@@ -716,15 +657,57 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
         encoding="utf-8", capture_output=True).stdout
     prediction_entry = prediction_results(protein_name,directory,time_spent,machine_info)
     Z[f'p{protein_count}'] = prediction_entry
+
+    with open(f'{output_dir}/{og_jobname}_report.txt', 'w', encoding='utf-8') as file:
+      file.write(protein_name + '\n')
+      file.write(directory + '\n')
+      file.write(str(time_spent) + '\n')
+      file.write(machine_info)
+      file.close()
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
-    files.download(f'{output_dir}.zip')
+    if 'COLAB_GPU' in os.environ:
+      files.download(f'{output_dir}.zip')
+    print(f"Protein finished, proceeding...")
+    time.sleep(3)
 
     gc.collect() #free memory to be able to run further iterations
-    print(f"Protein finished, proceeding...")
     continue
-  #extract_zips()
+  now = datetime.now()
+  dt_string = now.strftime("%Y%m%d%H%M%S")
+  with open(f'{dt_string}.afxt', 'w', encoding='utf-8') as file:
+      for result in list(Z.values()):
+        file.write(result.directory + '\n')
+      file.close()
+  if 'COLAB_GPU' in os.environ:
+    files.download(f'{dt_string}.afxt')
+
   return Z
 
+
+def load(filedir):
+  Z = {}
+  protein_count = 0
+  with open(filedir,'r') as file:
+    lines = file.readlines()
+    file.close()
+  for zipf in lines:
+    zipf = zipf[:-1]
+    if os.path.exists(zipf) == True: #Excluding linebreaks
+          protein_count = protein_count + 1
+          with ZipFile(zipf, 'r') as fz:
+            for zip_info in fz.infolist():
+              if zip_info.filename[-1] == '/':
+                continue
+              tab = os.path.basename(zip_info.filename)
+              if tab.endswith(".txt"):
+                #zip_info.filename = os.path.basename(zip_info.filename)
+                with fz.open(zip_info.filename) as pred_info:
+                  pred_lines = pred_info.readlines()
+                  pred_info.close()
+                #details = pred_lines.values()
+                prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'))
+                Z[f'p{protein_count}'] = prediction_entry
+  return Z
 
 def extract_zips(dir="."): #whole directory inputted
   with os.scandir(dir) as ficheros:
