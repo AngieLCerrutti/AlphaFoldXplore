@@ -38,6 +38,7 @@ chmod +x alphafoldxplore
 
 * ``` python >= 3.7 ```
 * ``` biopython >= 1.79 ```
+* ``` nglview >= 3.0.3 ```
 * ``` jax >= 0.3.8 ```
 * ``` tqdm >= 4.64.0 ```
 * ``` numpy ```
@@ -108,6 +109,8 @@ plot_plddt(optional_object_for_comparison)
 fit(sample_object)
 
 rmsd(sample_object,start,end)
+
+show(optional_object_for_comparison)
 ```
 ![rmsd](https://user-images.githubusercontent.com/62774640/174699787-d526c0d6-26d7-4ec4-93a2-d0762e1af301.jpeg)
 

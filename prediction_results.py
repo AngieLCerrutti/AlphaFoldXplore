@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(1, 'AlphaFoldXplore')
+sys.path.insert(2, 'AlphaFoldXplore')
 import alphafoldxplore as afx
 import os
 
@@ -59,22 +59,33 @@ class prediction_results:
       dir_1, dir_2 = self.get_pdbs(p2)
       return afx.calc_individual_rmsd(dir_1, dir_2, start, end)
 
-    def get_pdbs(self, p2): #not plddt nor pae
+    def get_pdbs(self, p2 = 0): #not plddt nor pae
       afx.clean()
       afx.extract_zip(self.directory)
       with os.scandir("pdb_files") as pdbs:
         for pdb in pdbs:
           dir_1 = pdb.path
-      afx.clean()
-      afx.extract_zip(p2.directory)
-      with os.scandir("pdb_files") as pdbs:
-        for pdb in pdbs:
-          dir_2 = pdb.path
-      afx.extract_zip(self.directory)
+      if type(p2) != int:
+        afx.clean()
+        afx.extract_zip(p2.directory)
+        with os.scandir("pdb_files") as pdbs:
+          for pdb in pdbs:
+            dir_2 = pdb.path
+        afx.extract_zip(self.directory)
+      else:
+      	return dir_1
       return dir_1, dir_2
 
-    def view(self, p2): #not finished
+    def view(self, p2 = 0): #not finished
       if 'COLAB_GPU' in os.environ:
         print('This command is not supported by Google Colab.')
       else:
-        pass
+        import nglview as nv
+        if type(p2) != int:
+          dir_1, dir_2 = self.get_pdbs(p2)
+          view = nv.show_file(dir_1)
+          view.add_component(dir_2)
+        else:
+          dir_1 = self.get_pdbs()
+          view = nv.show_file(dir_1)
+        return view

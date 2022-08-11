@@ -5,7 +5,8 @@ from os import name
 if 'COLAB_GPU' in os.environ:
   from google.colab import files #to download the predictions later if you're on Colab
 else:
-  raise RuntimeError('Non-Colab devices not supported. Please install AlphaFoldXplore on a Colab machine.')
+  print('For best results install AlphaFoldXplore on a Colab machine.')
+  import nglview
 import jax
 from IPython.utils import io
 import subprocess
@@ -37,7 +38,7 @@ import time
 import pandas as pd
 import seaborn as sns
 from datetime import datetime
-from prediction_results import prediction_results
+import prediction_results
 
 def set_up():
   if 'COLAB_GPU' in os.environ:
@@ -145,6 +146,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
   
   seque= []
   Z = {}
+  from prediction_results import prediction_results
   for sec in d.items():
     protein_count = protein_count + 1
     start = time.time()
@@ -685,6 +687,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
 
 
 def load(filedir):
+  from prediction_results import prediction_results
   Z = {}
   protein_count = 0
   with open(filedir,'r') as file:
