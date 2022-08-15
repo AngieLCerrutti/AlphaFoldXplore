@@ -89,3 +89,9 @@ class prediction_results:
           dir_1 = self.get_pdbs()
           view = nv.show_file(dir_1)
         return view
+
+    def get_molecular_weight(self):
+      directory = self.get_pdbs()
+      value = afx.molecular_weight(directory)
+      print(value)
+      return value

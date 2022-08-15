@@ -39,6 +39,7 @@ import pandas as pd
 import seaborn as sns
 from datetime import datetime
 import prediction_results
+os.makedirs("input", exist_ok=True)
 
 def set_up():
   if 'COLAB_GPU' in os.environ:
@@ -712,6 +713,20 @@ def load(filedir):
                 Z[f'p{protein_count}'] = prediction_entry
   return Z
 
+def run():
+  count = 0
+  with os.scandir(dir="input") as inputs:
+    for input_sing in inputs:
+      if os.path.isfile(input_sing) == True:
+        input_sing = os.path.basename(input_sing)
+        if count < 1:
+          if input_sing.endswith(".afxt"):
+            count = count + 1
+            load(f"input/{input_sing}")
+          elif input_sing.endswith(".FASTA"):
+            count = count + 1
+            predict(f"input/{input_sing}")
+
 def extract_zips(dir="."): #whole directory inputted
   with os.scandir(dir) as ficheros:
     for fichero in ficheros:
@@ -791,25 +806,27 @@ def pae_results (pae1, pae2 = 0): # dos strings con direcciones a archivos pae, 
   else:
     pae_data["protein 1"] = pae1 #se asume que es un dataframe json
 
-  plt.rcParams["figure.figsize"] = [15, 4]
-  plt.rcParams["figure.autolayout"] = True
-  df1=(pae_data[list(pae_data)[0]])
-  fig, (ax1, ax2) = plt.subplots(ncols=2)
-  fig.subplots_adjust(wspace=0.1)
-  sns.heatmap(df1, cmap="plasma"  , ax=ax1) #cbar=False
-  if pae2_exist:
-    if str2:
-      f2 = open(pae2)
-      d2=json.load(f2)
-      f2.close()
-      dataf2=(pd.DataFrame(d2[0]["distance"]))
-      pae_data[os.path.basename(pae2)] = dataf2
+  import matplotlib as mpl
+  with mpl.rc_context({'figure.figsize': [15, 4],"figure.autolayout": True}):
+    df1=(pae_data[list(pae_data)[0]])
+    if pae2_exist:
+      fig, (ax1, ax2) = plt.subplots(ncols=2)
+      fig.subplots_adjust(wspace=0.1)
+      if str2:
+        f2 = open(pae2)
+        d2=json.load(f2)
+        f2.close()
+        dataf2=(pd.DataFrame(d2[0]["distance"]))
+        pae_data[os.path.basename(pae2)] = dataf2
+      else:
+        pae_data["Protein 2"] = pae2
+      df2=(pae_data[list(pae_data)[1]])
+      sns.heatmap(df2, cmap="plasma", ax=ax2)
+      ax2.yaxis.tick_right()
     else:
-      pae_data["Protein 2"] = pae2
-    df2=(pae_data[list(pae_data)[1]])
-    sns.heatmap(df2, cmap="plasma", ax=ax2)
-    ax2.yaxis.tick_right()
-  plt.show()
+      fig, (ax1) = plt.subplots(ncols=1)
+    sns.heatmap(df1, cmap="plasma"  , ax=ax1)
+    plt.show()
 
 def get_plddt_files(dir = 'pdb_files'):
   with os.scandir(dir) as ficheros:
@@ -1019,3 +1036,11 @@ def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, util
   print("Mean RMSD:")
   print(str(suma) + ' Å') #el rmsd total según la formula, ahora dando tal como en los otros métodos
   return rmsd_individual
+
+
+
+def molecular_weight(pdb):
+  from Bio import SeqIO
+  from Bio import SeqUtils
+  record = SeqIO.read(pdb, "pdb-atom")
+  return SeqUtils.molecular_weight(record.seq, "protein")
