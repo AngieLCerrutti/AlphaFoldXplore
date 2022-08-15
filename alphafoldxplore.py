@@ -715,7 +715,7 @@ def load(filedir):
 
 def run():
   count = 0
-  with os.scandir(dir="input") as inputs:
+  with os.scandir("input") as inputs:
     for input_sing in inputs:
       if os.path.isfile(input_sing) == True:
         input_sing = os.path.basename(input_sing)
