@@ -22,15 +22,19 @@ class prediction_results:
     def add_machine_details(self, x):
       self.machine_details = x
 
-    def plot_pae(self, p2=None): #p2 must be another prediction_results object
+    def plot_pae(self, p2=None, substract=False): #p2 must be another prediction_results object
       afx.clean()
       afx.extract_zip(self.directory)
       pae_file1 = afx.get_pae_files()
       if p2:
-        afx.clean()
-        afx.extract_zip(p2.directory)
-        pae_file2 = afx.get_pae_files()
-        afx.pae_results(pae_file1[list(pae_file1)[0]],pae_file2[list(pae_file2)[0]])
+        if isinstance(p2, prediction_results):
+          afx.clean()
+          afx.extract_zip(p2.directory)
+          pae_file2 = afx.get_pae_files()
+          afx.pae_results(pae_file1[list(pae_file1)[0]],pae_file2[list(pae_file2)[0]], substract)
+        else:
+          print("P2 does not have the correct type. Defaulting to single plot.")
+          afx.pae_results(pae_file1[list(pae_file1)[0]])
       else:
         afx.pae_results(pae_file1[list(pae_file1)[0]])
       afx.clean()

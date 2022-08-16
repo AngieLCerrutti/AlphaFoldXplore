@@ -722,10 +722,10 @@ def run():
         if count < 1:
           if input_sing.endswith(".afxt"):
             count = count + 1
-            load(f"input/{input_sing}")
+            return load(f"input/{input_sing}")
           elif input_sing.endswith(".FASTA"):
             count = count + 1
-            predict(f"input/{input_sing}")
+            return predict(f"input/{input_sing}")
 
 def extract_zips(dir="."): #whole directory inputted
   with os.scandir(dir) as ficheros:
@@ -781,7 +781,7 @@ def get_pae_files(dir = "json_files"): #returns a dict with pae data
         f.close()
   return(imagenes)
 
-def pae_results (pae1, pae2 = 0): # dos strings con direcciones a archivos pae, pae2 es opcional. también admite dataframes
+def pae_results (pae1, pae2 = 0, substract=False): # dos strings con direcciones a archivos pae, pae2 es opcional. también admite dataframes
   pae_data={}
   if type(pae1) == str:
     str1 = True
@@ -807,11 +807,9 @@ def pae_results (pae1, pae2 = 0): # dos strings con direcciones a archivos pae, 
     pae_data["protein 1"] = pae1 #se asume que es un dataframe json
 
   import matplotlib as mpl
-  with mpl.rc_context({'figure.figsize': [15, 4],"figure.autolayout": True}):
+  with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
     df1=(pae_data[list(pae_data)[0]])
     if pae2_exist:
-      fig, (ax1, ax2) = plt.subplots(ncols=2)
-      fig.subplots_adjust(wspace=0.1)
       if str2:
         f2 = open(pae2)
         d2=json.load(f2)
@@ -821,8 +819,14 @@ def pae_results (pae1, pae2 = 0): # dos strings con direcciones a archivos pae, 
       else:
         pae_data["Protein 2"] = pae2
       df2=(pae_data[list(pae_data)[1]])
-      sns.heatmap(df2, cmap="plasma", ax=ax2)
-      ax2.yaxis.tick_right()
+      if substract:
+        fig, (ax1) = plt.subplots(ncols=1)
+        df1 = df1 - df2
+      else:
+        fig, (ax1, ax2) = plt.subplots(ncols=2)
+        fig.subplots_adjust(wspace=0.1)
+        sns.heatmap(df2, cmap="plasma", ax=ax2)
+        ax2.yaxis.tick_right()
     else:
       fig, (ax1) = plt.subplots(ncols=1)
     sns.heatmap(df1, cmap="plasma"  , ax=ax1)
