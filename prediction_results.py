@@ -22,10 +22,12 @@ class prediction_results:
     def add_machine_details(self, x):
       self.machine_details = x
 
-    def plot_pae(self, p2=None, substract=False): #p2 must be another prediction_results object
+    def plot_pae(self, p2=None, substract=None): #p2 must be another prediction_results object
       afx.clean()
       afx.extract_zip(self.directory)
       pae_file1 = afx.get_pae_files()
+      if not substract:
+        substract = False
       if p2:
         if isinstance(p2, prediction_results):
           afx.clean()
