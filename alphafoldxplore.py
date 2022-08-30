@@ -714,18 +714,28 @@ def load(filedir):
   return Z
 
 def run():
-  count = 0
   with os.scandir("input") as inputs:
     for input_sing in inputs:
       if os.path.isfile(input_sing) == True:
         input_sing = os.path.basename(input_sing)
-        if count < 1:
           if input_sing.endswith(".afxt"):
-            count = count + 1
+            print("Attempting to load a result...")
             return load(f"input/{input_sing}")
           elif input_sing.endswith(".FASTA"):
-            count = count + 1
+            print("Attempting to predict proteins...")
             return predict(f"input/{input_sing}")
+
+  print("No file was found in the input folder. Reading from the main folder...")
+
+  with os.scandir("") as inputs:
+    for input_sing in inputs:
+      if os.path.isfile(input_sing) == True:
+        input_sing = os.path.basename(input_sing)
+          if input_sing.endswith(".afxt"):
+            return load(f"{input_sing}")
+          elif input_sing.endswith(".FASTA"):
+            return predict(f"{input_sing}")
+  raise Exception("Error: no valid file found.")
 
 def extract_zips(dir="."): #whole directory inputted
   with os.scandir(dir) as ficheros:
