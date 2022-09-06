@@ -731,10 +731,10 @@ def run():
     for input_sing in inputs:
       if os.path.isfile(input_sing) == True:
         input_sing = os.path.basename(input_sing)
-          if input_sing.endswith(".afxt"):
-            return load(f"{input_sing}")
-          elif input_sing.endswith(".FASTA"):
-            return predict(f"{input_sing}")
+        if input_sing.endswith(".afxt"):
+          return load(f"{input_sing}")
+        elif input_sing.endswith(".FASTA"):
+          return predict(f"{input_sing}")
   raise Exception("Error: no valid file found.")
 
 def extract_zips(dir="."): #whole directory inputted
@@ -906,6 +906,7 @@ def plddt_results(plddt1, plddt2 = 0):
     for m in plddt_data[list(plddt_data)[1]]:
       l=float(m)
       pay2.append(l)
+  import matplotlib as mpl
   with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
     if plddt2_exist:  
       df1 = pd.DataFrame(list(zip(pay1,pay2)), columns = ["m1","m2"])
@@ -1041,6 +1042,7 @@ def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, util
   suma = math.sqrt(suma/len_dist) #Raiz cuadrada de la sumatoria de todas las distancias dividida la longitud de las proteínas
   rmsd_individual = np.array(rmsd_individual)
   rmsd_individual = rmsd_individual.reshape(-1,1)
+  import matplotlib as mpl
   with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
     plt.plot(rmsd_individual, label=f"{os.path.basename(p1)} + {os.path.basename(p2)}")
     plt.legend(loc='upper left')
