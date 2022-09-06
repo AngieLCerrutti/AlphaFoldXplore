@@ -718,16 +718,16 @@ def run():
     for input_sing in inputs:
       if os.path.isfile(input_sing) == True:
         input_sing = os.path.basename(input_sing)
-          if input_sing.endswith(".afxt"):
-            print("Attempting to load a result...")
-            return load(f"input/{input_sing}")
-          elif input_sing.endswith(".FASTA"):
-            print("Attempting to predict proteins...")
-            return predict(f"input/{input_sing}")
+        if input_sing.endswith(".afxt"):
+          print("Attempting to load a result...")
+          return load(f"input/{input_sing}")
+        elif input_sing.endswith(".FASTA"):
+          print("Attempting to predict proteins...")
+          return predict(f"input/{input_sing}")
 
   print("No file was found in the input folder. Reading from the main folder...")
 
-  with os.scandir("") as inputs:
+  with os.scandir(".") as inputs:
     for input_sing in inputs:
       if os.path.isfile(input_sing) == True:
         input_sing = os.path.basename(input_sing)
@@ -906,19 +906,19 @@ def plddt_results(plddt1, plddt2 = 0):
     for m in plddt_data[list(plddt_data)[1]]:
       l=float(m)
       pay2.append(l)
-
-  if plddt2_exist:  
-    df1 = pd.DataFrame(list(zip(pay1,pay2)), columns = ["m1","m2"])
-    plt.plot(df1['m1'], label=label1)
-    plt.plot(df1['m2'], label=label2)
-  else:
-    df1 = pd.DataFrame(list(zip(pay1)), columns = ["m1"])
-    plt.plot(df1['m1'], label=label1)
-  plt.legend(loc='lower left')
-  plt.xlabel('Index')
-  plt.ylabel('pLDDT%')
-  plt.title('pLDDT comparation between predictions')
-  plt.show()
+  with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
+    if plddt2_exist:  
+      df1 = pd.DataFrame(list(zip(pay1,pay2)), columns = ["m1","m2"])
+      plt.plot(df1['m1'], label=label1)
+      plt.plot(df1['m2'], label=label2)
+    else:
+      df1 = pd.DataFrame(list(zip(pay1)), columns = ["m1"])
+      plt.plot(df1['m1'], label=label1)
+    plt.legend(loc='lower left')
+    plt.xlabel('Index')
+    plt.ylabel('pLDDT%')
+    plt.title('pLDDT comparation between predictions')
+    plt.show()
 
 def superimpose_proteins(p1,p2): #Superposición de proteínas
   #Agradecimientos a Anders Steen Christensen por el código: https://gist.github.com/andersx/6354971
@@ -1041,14 +1041,15 @@ def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, util
   suma = math.sqrt(suma/len_dist) #Raiz cuadrada de la sumatoria de todas las distancias dividida la longitud de las proteínas
   rmsd_individual = np.array(rmsd_individual)
   rmsd_individual = rmsd_individual.reshape(-1,1)
-  plt.plot(rmsd_individual, label=f"{os.path.basename(p1)} + {os.path.basename(p2)}")
-  plt.legend(loc='upper left')
-  plt.xlabel('Index')
-  plt.ylabel('RMSD')
-  plt.title('Individual RMSD between CA atoms')
-  plt.show()
-  print("Mean RMSD:")
-  print(str(suma) + ' Å') #el rmsd total según la formula, ahora dando tal como en los otros métodos
+  with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
+    plt.plot(rmsd_individual, label=f"{os.path.basename(p1)} + {os.path.basename(p2)}")
+    plt.legend(loc='upper left')
+    plt.xlabel('Index')
+    plt.ylabel('RMSD')
+    plt.title('Individual RMSD between CA atoms')
+    plt.show()
+    print("Mean RMSD:")
+    print(str(suma) + ' Å') #el rmsd total según la formula, ahora dando tal como en los otros métodos
   return rmsd_individual
 
 

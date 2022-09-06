@@ -2,9 +2,9 @@
 
 A simple program to simplify the use of [AlphaFold](https://github.com/deepmind/alphafold), visualization of protein structures and other metrics for the end user.
 
-Only for Colab as of the current version.
+Designed for Colab, but can be used on local Jupyter environments.
 
-[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AngieLCerrutti/AlphaFoldXplore/blob/main/example/AlphaFoldXplore_example.ipynb)
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AngieLCerrutti/AlphaFoldXplore/blob/main/example/AlphaFoldXplore_Colab_SimplePredict.ipynb)
 
 Alphafold is a software that has the ability to predict protein structures with an almost experimental accuracy in most cases, but it requires a lot of computational resources such as GPU; for this reason, some tweaks were done for the software to be able to run optimizing resources, such as removing any graphical interface and defaulting parameters to the fastest options. 
 
@@ -46,7 +46,7 @@ chmod +x alphafoldxplore
 
 For notes about how to use AlphaFoldXplore and its functions, see the [wiki](https://github.com/AngieLCerrutti/AlphaFoldXplore/wiki).
 
-For details about how the predictions work, see the [AlphaFold documentation](https://github.com/deepmind/alphafold).
+For details about how the predictions work and what the results mean, see the [AlphaFold documentation](https://github.com/deepmind/alphafold).
 
 ## Authors
 
