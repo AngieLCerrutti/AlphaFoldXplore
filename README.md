@@ -15,7 +15,7 @@ Separately, some functions were made so that the user can plot the predictions a
 
 ## Installation
 
-For best results, install ```alphafoldxplore.py``` on an empty folder at first.
+For best results, install AlphaFoldXplore on an empty folder.
 
 The easiest way is to clone the Github repo:
 ```
