@@ -683,8 +683,10 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
   os.makedirs(f"prediction_{dt_string}", exist_ok=True)
   for i in range(len(list(Z.values()))):
     i1= i + 1
-    Z[f'p{i1}'] = Z[f'p{i1}'].add_dir(f"prediction_{dt_string}/{Z[f'p{i1}'].directory}")
-    os.system(f"mv {Z[f'p{i1}'].directory} prediction_{dt_string}")
+    olddir = Z[f'p{i1}'].directory
+    newdir = f"prediction_{dt_string}/{olddir}"
+    Z[f'p{i1}'].add_dir(newdir)
+    os.system(f"mv {olddir} prediction_{dt_string}")
   os.system(f"mv {dt_string}_list.txt prediction_{dt_string}")
   os.system(f"zip -FSr -D {dt_string}.zip prediction_{dt_string}")
   os.system(f"mv {dt_string}.zip {dt_string}.afxt")
