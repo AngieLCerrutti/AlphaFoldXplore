@@ -2,14 +2,15 @@
 
 A python interface to run  [AlphaFold](https://github.com/deepmind/alphafold) and explore, analize and visualize their protein prediction results in a local like environment. It is designed to minimize effort and resources.
 
-Up to now it is only available on Colab. It allows processing multifasta files holdong sequences of length <= 600 Aminoacids.
-By uploadng a simple or multifasta file to the colab and just pressing the run button, it will process all your sequences and tehy will be doownloaded to you local disk (Please be sure to set up your browser to automatic download).
+Up to now it is only available on Colab. It allows processing multifasta files holding sequences of length \leq 600 Aminoacids.
+By uploadng a simple or multifasta file to the colab and just pressing the run button, it will process all your sequences. Once finish all the rpediction and metrics will be doownloaded to you local disk encapsulated into a python object (Please be sure to set up your browser to automatic download).
 
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AngieLCerrutti/AlphaFoldXplore/blob/main/example/AlphaFoldXplore_Colab_SimplePredict.ipynb)
 
-The you will be able to analize, compare, visualize all your results trhough AlpgaFoldXplore in your local machine with an easy to use API.
+The you will be able to analize, compare, visualize all your results trhough AlphaFoldXplore in your local machine with an easy to use API.
 
-#AlphaFoldXplore Rationale
+# AlphaFoldXplore Rationale
+
 Alphafold is a software that has the ability to predict protein structures with an almost experimental accuracy in most cases, but it requires a lot of computational resources such as GPU; for this reason, some tweaks were done for the software to be able to run on smaller optimized environments with minimizing user interactions, such as removing any graphical interface and defaulting parameters to the fastest options. 
 
 In addition, AlphaFoldXplore provides serval functions through a Object Oriented software API allowing  the user ploting the predictions, prediction quality scores [pLDDT and PAE metrics](https://www.deepmind.com/publications/enabling-high-accuracy-protein-structure-prediction-at-the-proteome-scale)). In addition we implement some functionalities to explore deviations between two proteins ([RMSD](https://www.sciencedirect.com/science/article/pii/S1359027898000194)), protein overlapping and more. 
