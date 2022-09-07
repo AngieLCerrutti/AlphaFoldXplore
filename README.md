@@ -1,37 +1,35 @@
 # AlphaFoldXplore
 
-A simple program to simplify the use of [AlphaFold](https://github.com/deepmind/alphafold), visualization of protein structures and other metrics for the end user.
+A python interface to run  [AlphaFold](https://github.com/deepmind/alphafold) and explore, analize and visualize their protein prediction results in a local like invironment. It is designed to minimize effort and resources.
 
-Designed for Colab, but can be used on local Jupyter environments.
+Up to now it is only available on Colab. It allows processing multifasta files holdong sequences of length <= 600 Aminoacids.
+By uploadng a simple or multifasta file to the colab and just pressing the run button, it will process all your sequences and tehy will be doownloaded to you local disk (Please be sure to set up your browser to automatic download).
 
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AngieLCerrutti/AlphaFoldXplore/blob/main/example/AlphaFoldXplore_Colab_SimplePredict.ipynb)
 
-Alphafold is a software that has the ability to predict protein structures with an almost experimental accuracy in most cases, but it requires a lot of computational resources such as GPU; for this reason, some tweaks were done for the software to be able to run optimizing resources, such as removing any graphical interface and defaulting parameters to the fastest options. 
+The you will be able to analize, compare, visualize all your results trhough AlpgaFoldXplore in your local machine with an easy to use API.
 
-Separately, some functions were made so that the user can plot the predictions and how trustable they are (protein drawing, [pLDDT and PAE metrics](https://www.deepmind.com/publications/enabling-high-accuracy-protein-structure-prediction-at-the-proteome-scale)). After that, another function that estimates how much deviation there is between two proteins ([RMSD](https://www.sciencedirect.com/science/article/pii/S1359027898000194)) was made. Finally, improvements were made to accept the input of a multiFASTA file.
+#AlphaFoldXplore Rationale
+Alphafold is a software that has the ability to predict protein structures with an almost experimental accuracy in most cases, but it requires a lot of computational resources such as GPU; for this reason, some tweaks were done for the software to be able to run on smaller optimized environments with minimizing user interactions, such as removing any graphical interface and defaulting parameters to the fastest options. 
+
+In addition, AlphaFoldXplore provides serval functions through a Object Oriented software API allowing  the user ploting the predictions, prediction quality scores [pLDDT and PAE metrics](https://www.deepmind.com/publications/enabling-high-accuracy-protein-structure-prediction-at-the-proteome-scale)). In addition we implement some functionalities to explore deviations between two proteins ([RMSD](https://www.sciencedirect.com/science/article/pii/S1359027898000194)), protein overlapping and more. 
 
 ![prot](https://user-images.githubusercontent.com/62774640/174698354-a814f773-cd13-4d71-9192-04147fd29b64.jpeg)
-<sup>A pair of proteins predicted with AlphaFoldXplore and superimposed against each other.</sup>
+<sup>A pair of proteins predicted with AlphaFoldXplore, superimposed against each other and visualized trhough AlphaFoldXplore.</sup>
 
 ## Installation
 
-For best results, install AlphaFoldXplore on an empty folder.
+UNDER CONSTRUCTION
 
-The easiest way is to clone the Github repo:
+cloning the Github repo:
 ```
 git clone https://github.com/AngieLCerrutti/AlphaFoldXplore
 ```
-and then import the module with:
+importing the AlphaFoldXplore module into your notebook:
 ```python
 from AlphaFoldXplore import alphafoldxplore
 ```
 
-Otherwise, since the module is nothing but a few _.py_ files, you can download them alone on your folder of choice:
-```
-wget -O alphafoldxplore https://github.com/AngieLCerrutti/AlphaFoldXplore/blob/main/alphafoldxplore.py
-wget -O alphafoldxplore https://github.com/AngieLCerrutti/AlphaFoldXplore/blob/main/prediction_results.py
-chmod +x alphafoldxplore
-```
 ## API
 
 ### Requisites
@@ -51,7 +49,7 @@ For details about how the predictions work and what the results mean, see the [A
 ## Authors
 
 - Elmer Andrés Fernández - Original Idea - [Profile](https://www.researchgate.net/profile/Elmer-Fernandez-2) - CIDIE- [CONICET](https://www.conicet.gov.ar) - [UCC](http://www.ucc.edu.ar).
-- Juan Ignacio Folco - Programming - Universidad Católica de Córdoba.
+- Juan Ignacio Folco - Developer and Maintener - Universidad Católica de Córdoba.
 - Angie Lucía Cerrutti -  Programming - Universidad Católica de Córdoba.
 - Verónica Baronetto - Advice - Universidad Católica de Córdoba.
 - Pablo Pastore - Advice - Universidad Católica de Córdoba.
@@ -60,7 +58,7 @@ For details about how the predictions work and what the results mean, see the [A
 ## Contributing
 
 To *contribute*, do the following:
-
+* contact efernandez at cidie . ucc . edu . ar
 * Open an issue to discuss possible changes or ask questions
 * Create a *fork* of the project
 * Create a new *branch* and push your changes
