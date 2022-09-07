@@ -38,6 +38,7 @@ import time
 import pandas as pd
 import seaborn as sns
 from datetime import datetime
+import shutil
 import prediction_results
 os.makedirs("input", exist_ok=True)
 
@@ -668,49 +669,63 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
       file.write(machine_info)
       file.close()
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
-    if 'COLAB_GPU' in os.environ:
-      files.download(f'{output_dir}.zip')
-    print(f"Protein finished, proceeding...")
-    time.sleep(3)
-
+    #if 'COLAB_GPU' in os.environ:
+      #files.download(f'{output_dir}.zip')
+    print(f"Protein {protein_name} finished, proceeding...")
     gc.collect() #free memory to be able to run further iterations
     continue
   now = datetime.now()
   dt_string = now.strftime("%Y%m%d%H%M%S")
-  with open(f'{dt_string}.afxt', 'w', encoding='utf-8') as file:
+  with open(f'{dt_string}_list.txt', 'w', encoding='utf-8') as file:
       for result in list(Z.values()):
         file.write(result.directory + '\n')
       file.close()
+  os.makedirs(f"prediction_{dt_string}", exist_ok=True)
+  for i in range(len(list(Z.values()))):
+    i1= i + 1
+    Z[f'p{i1}'] = Z[f'p{i1}'].add_dir(f"prediction_{dt_string}/{Z[f'p{i1}'].directory}")
+    os.system(f"mv {Z[f'p{i1}'].directory} prediction_{dt_string}")
+  os.system(f"mv {dt_string}_list.txt prediction_{dt_string}")
+  os.system(f"zip -FSr -D {dt_string}.zip prediction_{dt_string}")
+  os.system(f"mv {dt_string}.zip {dt_string}.afxt")
   if 'COLAB_GPU' in os.environ:
     files.download(f'{dt_string}.afxt')
 
   return Z
 
-
 def load(filedir):
   from prediction_results import prediction_results
   Z = {}
   protein_count = 0
-  with open(filedir,'r') as file:
-    lines = file.readlines()
-    file.close()
-  for zipf in lines:
-    zipf = zipf[:-1]
-    if os.path.exists(zipf) == True: #Excluding linebreaks
-          protein_count = protein_count + 1
-          with ZipFile(zipf, 'r') as fz:
-            for zip_info in fz.infolist():
-              if zip_info.filename[-1] == '/':
-                continue
-              tab = os.path.basename(zip_info.filename)
-              if tab.endswith(".txt"):
-                #zip_info.filename = os.path.basename(zip_info.filename)
-                with fz.open(zip_info.filename) as pred_info:
-                  pred_lines = pred_info.readlines()
-                  pred_info.close()
-                #details = pred_lines.values()
-                prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'))
-                Z[f'p{protein_count}'] = prediction_entry
+  extract_folder = f"prediction_{os.path.basename(filedir[:-5])}"
+  #os.makedirs(extract_folder, exist_ok=True)
+  with ZipFile(filedir,'r') as fz:
+    fz.extractall(".")
+
+  for path in os.listdir(extract_folder):
+    long_path = os.path.join(extract_folder, path)
+    if long_path.endswith(".txt"):
+      with open(long_path,'r') as file:
+        lines = file.readlines()
+        file.close()
+      for zipf in lines:
+        zipf = zipf[:-1]
+        zipf = os.path.join(extract_folder, zipf)
+        if os.path.exists(zipf) == True: #Excluding linebreaks
+              protein_count = protein_count + 1
+              with ZipFile(zipf, 'r') as fz:
+                for zip_info in fz.infolist():
+                  if zip_info.filename[-1] == '/':
+                    continue
+                  tab = os.path.basename(zip_info.filename)
+                  if tab.endswith(".txt"):
+                    #zip_info.filename = os.path.basename(zip_info.filename)
+                    with fz.open(zip_info.filename) as pred_info:
+                      pred_lines = pred_info.readlines()
+                      pred_info.close()
+                    #details = pred_lines.values()
+                    prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'))
+                    Z[f'p{protein_count}'] = prediction_entry
   return Z
 
 def run():
@@ -772,7 +787,6 @@ def extract_zip(dir): #singular, zip string as parameter, must end in .zip
     print("Could not extract. Zip file not found")
 
 def clean(): #erases the folders by extract_zip and so. Meant to be used silently by the script.
-  import shutil
   try:
     shutil.rmtree('json_files')
     shutil.rmtree('pdb_files')
@@ -966,7 +980,6 @@ def superimpose_proteins(p1,p2): #Superposición de proteínas
   # Almacenar la versión alineada de la proteína de ejemplo
   io = Bio.PDB.PDBIO()
 
-  i = 0
   io.set_structure(sample_structure) 
   og_name = os.path.basename(p2)
   io.save(f"superimposed_{og_name[:-4]}.pdb")
@@ -1053,8 +1066,6 @@ def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, util
     print("Mean RMSD:")
     print(str(suma) + ' Å') #el rmsd total según la formula, ahora dando tal como en los otros métodos
   return rmsd_individual
-
-
 
 def molecular_weight(pdb):
   from Bio import SeqIO
