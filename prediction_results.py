@@ -82,7 +82,7 @@ class prediction_results:
       	return dir_1
       return dir_1, dir_2
 
-    def view(self, p2 = 0): #not finished
+    def view(self, p2 = 0):
       if 'COLAB_GPU' in os.environ:
         print('This command is not supported by Google Colab.')
       else:

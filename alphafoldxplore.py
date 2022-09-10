@@ -131,7 +131,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
   from alphafold.data import pipeline
   from alphafold.common import protein
   from alphafold.data import parsers
-  import alphafold.model #reimportando lo que no se podía aimportar al principio por tener que descargar AlphaFold
+  import alphafold.model 
   from alphafold.model import model
   from alphafold.model import config
   from alphafold.model import data
@@ -148,6 +148,9 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
   
   seque= []
   Z = {}
+  indiv_predic_list=[]
+  now = datetime.now()
+  dt_string = now.strftime("%Y%m%d%H%M%S")
   from prediction_results import prediction_results
   for sec in d.items():
     protein_count = protein_count + 1
@@ -186,7 +189,6 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
     ori_sequence = sequence
     sequence = sequence.replace("/","").replace(":","")
     seqs = ori_sequence.replace("/","").split(":")
-
     if len(seqs) != len(homooligomers):
       if len(homooligomers) == 1:
         homooligomers = [homooligomers[0]] * len(seqs)
@@ -212,7 +214,6 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
 
     MIN_SEQUENCE_LENGTH = 16
     MAX_SEQUENCE_LENGTH = 2500
-
     aatypes = set('ACDEFGHIKLMNPQRSTVWY')  # 20 standard aatypes
     if not set(full_sequence).issubset(aatypes):
       raise Exception(f'Input sequence contains non-amino acid letters: {set(sequence) - aatypes}. AlphaFold only supports 20 standard amino acids as inputs.')
@@ -224,7 +225,6 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
     if len(full_sequence) >= 650:
       print(f"WARNING: For a typical Google-Colab-GPU (12G) session, the max total length is ~650 residues. You are at {len(full_sequence)}! Running Alphafold may cause crashes.")
 
-    print(f"homooligomer: '{homooligomer}'")
     print(f"total_length: '{len(full_sequence)}'") 
     print(f"working_directory: '{output_dir}'")    
     
@@ -289,7 +289,6 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
         else: _blank[ns] = vals
         if mode == "seq": return "".join(_blank)
         if mode == "mtx": return sum(_blank,[])
-
       if len(seqs) == 1 or "unpaired" in pair_mode:
         # gather msas
         if msa_method == "mmseqs2":
@@ -319,64 +318,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
             msas.append(msa)
             deletion_matrices.append(mtx)
 
-    ####################################################################################
-    # PAIR_MSA
-    ####################################################################################
-      if len(seqs) > 1 and (pair_mode == "paired" or pair_mode == "unpaired+paired"):
-        print("attempting to pair some sequences...")
-
-        if msa_method == "mmseqs2":
-          prefix = cf.get_hash("".join(seqs))
-          prefix = os.path.join('tmp',prefix)
-          print(f"running mmseqs2_noenv_nofilter on all seqs")
-          A3M_LINES = cf.run_mmseqs2(seqs, prefix, use_env=False, use_filter=False)
-
-        _data = []
-        for a in range(len(seqs)):
-          print(f"prepping seq_{a}")
-          _seq = seqs[a]
-          _prefix = os.path.join('tmp',cf.get_hash(_seq))
-
-          if msa_method == "mmseqs2":
-            a3m_lines = A3M_LINES[a]
-            _msa, _mtx, _lab = pairmsa.parse_a3m(a3m_lines,
-                                              filter_qid=pair_qid/100,
-                                              filter_cov=pair_cov/100)
-          if len(_msa) > 1:
-            _data.append(pairmsa.hash_it(_msa, _lab, _mtx, call_uniprot=False))
-          else:
-            _data.append(None)
-      
-        Ln = len(seqs)
-        O = [[None for _ in seqs] for _ in seqs]
-        for a in range(Ln):
-          if _data[a] is not None:
-            for b in range(a+1,Ln):
-              if _data[b] is not None:
-                print(f"attempting pairwise stitch for {a} {b}")            
-                O[a][b] = pairmsa._stitch(_data[a],_data[b])
-                _seq_a, _seq_b, _mtx_a, _mtx_b = (*O[a][b]["seq"],*O[a][b]["mtx"])
-
-                ##############################################
-                # filter to remove redundant sequences
-                ##############################################
-                ok = []
-                with open("tmp/tmp.fas","w") as fas_file:
-                  fas_file.writelines([f">{n}\n{a+b}\n" for n,(a,b) in enumerate(zip(_seq_a,_seq_b))])
-                os.system("hhfilter -maxseq 1000000 -i tmp/tmp.fas -o tmp/tmp.id90.fas -id 90")
-                for line in open("tmp/tmp.id90.fas","r"):
-                  if line.startswith(">"): ok.append(int(line[1:]))
-                ##############################################            
-                print(f"found {len(_seq_a)} pairs ({len(ok)} after filtering)")
-
-                if len(_seq_a) > 0:
-                  msa,mtx = [sequence],[[0]*len(sequence)]
-                  for s_a,s_b,m_a,m_b in zip(_seq_a, _seq_b, _mtx_a, _mtx_b):
-                    msa.append(_pad([a,b],[s_a,s_b],"seq"))
-                    mtx.append(_pad([a,b],[m_a,m_b],"mtx"))
-                  msas.append(msa)
-                  deletion_matrices.append(mtx)
-
+  
     num_relax = "None"
     rank_by = "pLDDT"
     use_turbo = True
@@ -546,36 +488,39 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
 
       if use_turbo:
         # go through each random_seed
-        for seed in range(num_samples):
-        
-          # prep input features
-          if subsample_msa:
-            sampled_feats_dict = do_subsample_msa(feature_dict, random_seed=seed)    
-            processed_feature_dict = model_runner.process_features(sampled_feats_dict, random_seed=seed)
-          else:
-            processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
+        import warnings
+        with warnings.catch_warnings():
+          warnings.simplefilter(action='ignore', category=FutureWarning) #Jax is annoying so I temporarily do this. Version is specified either way
+          for seed in range(num_samples):
+          
+            # prep input features
+            if subsample_msa:
+              sampled_feats_dict = do_subsample_msa(feature_dict, random_seed=seed)    
+              processed_feature_dict = model_runner.process_features(sampled_feats_dict, random_seed=seed)
+            else:
+              processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
 
-          # go through each model
-          for num, model_name in enumerate(model_names):
-            name = model_name+"_ptm" if use_ptm else model_name
-            key = f"{name}_seed_{seed}"
-            pbar.set_description(f'Running {key}')
+            # go through each model
+            for num, model_name in enumerate(model_names):
+              name = model_name+"_ptm" if use_ptm else model_name
+              key = f"{name}_seed_{seed}"
+              pbar.set_description(f'Running {key}')
 
-            # replace model parameters
-            params = data.get_model_haiku_params(name, './alphafold/data')
-            for k in model_runner.params.keys():
-              model_runner.params[k] = params[k]
+              # replace model parameters
+              params = data.get_model_haiku_params(name, './alphafold/data')
+              for k in model_runner.params.keys():
+                model_runner.params[k] = params[k]
 
-            # predict
-            prediction_result, (r, t) = cf.to(model_runner.predict(processed_feature_dict, random_seed=seed),"cpu")
+              # predict
+              prediction_result, (r, t) = cf.to(model_runner.predict(processed_feature_dict, random_seed=seed),"cpu")
 
-            # save results
-            outs[key] = parse_results(prediction_result, processed_feature_dict)
-            outs[key].update({"recycles":r, "tol":t})
-            report(key)
+              # save results
+              outs[key] = parse_results(prediction_result, processed_feature_dict)
+              outs[key].update({"recycles":r, "tol":t})
+              report(key)
 
-            del prediction_result, params
-          del sampled_feats_dict, processed_feature_dict
+              del prediction_result, params
+            del sampled_feats_dict, processed_feature_dict
 
       else:  
         # go through each model
@@ -654,7 +599,7 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
 
     stop = time.time()
     protein_name = str(og_jobname)
-    directory = f'{output_dir}.zip'
+    directory = f'prediction_{dt_string}/{output_dir}.zip'
     time_spent = stop - start
     machine_info = subprocess.run(
         ["nvidia-smi", "--query-gpu=name,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used", "--format=csv,noheader"],
@@ -671,27 +616,27 @@ def predict(zfile): #se le pasa la dirección a un archivo FASTA
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
     #if 'COLAB_GPU' in os.environ:
       #files.download(f'{output_dir}.zip')
+    indiv_predic_list.append(output_dir)
     print(f"Protein {protein_name} finished, proceeding...")
     gc.collect() #free memory to be able to run further iterations
     continue
-  now = datetime.now()
-  dt_string = now.strftime("%Y%m%d%H%M%S")
+
   with open(f'{dt_string}_list.txt', 'w', encoding='utf-8') as file:
       for result in list(Z.values()):
-        file.write(result.directory + '\n')
+        file.write(f"{result.directory}\n")
       file.close()
   os.makedirs(f"prediction_{dt_string}", exist_ok=True)
   for i in range(len(list(Z.values()))):
     i1= i + 1
-    olddir = Z[f'p{i1}'].directory
-    newdir = f"prediction_{dt_string}/{olddir}"
-    Z[f'p{i1}'].add_dir(newdir)
+    olddir = Z[f'p{i1}'].directory.partition("/")[2]
     os.system(f"mv {olddir} prediction_{dt_string}")
   os.system(f"mv {dt_string}_list.txt prediction_{dt_string}")
   os.system(f"zip -FSr -D {dt_string}.zip prediction_{dt_string}")
   os.system(f"mv {dt_string}.zip {dt_string}.afxt")
   if 'COLAB_GPU' in os.environ:
     files.download(f'{dt_string}.afxt')
+  for item in indiv_predic_list:
+    shutil.rmtree(item)
 
   return Z
 
@@ -712,7 +657,8 @@ def load(filedir):
         file.close()
       for zipf in lines:
         zipf = zipf[:-1]
-        zipf = os.path.join(extract_folder, zipf)
+        if not "/" in zipf:
+          zipf = os.path.join(extract_folder, zipf)
         if os.path.exists(zipf) == True: #Excluding linebreaks
               protein_count = protein_count + 1
               with ZipFile(zipf, 'r') as fz:
@@ -754,11 +700,16 @@ def run():
           return predict(f"{input_sing}")
   raise Exception("Error: no valid file found.")
 
+###########################################################################
+##The end user is not meant to use the following fuctions. For ease of simplification refer to the above ones
+##and the use of the Prediction_results object.
+############################################################################
+
 def extract_zips(dir="."): #whole directory inputted
   with os.scandir(dir) as ficheros:
     for fichero in ficheros:
       if os.path.isfile(fichero) == True:
-        fichero = os.path.basename(fichero)
+        fichero = os.path.realpath(fichero)
         if fichero.endswith(".zip"):
           with ZipFile(fichero, 'r') as fz:
             for zip_info in fz.infolist():
@@ -807,7 +758,7 @@ def get_pae_files(dir = "json_files"): #returns a dict with pae data
         f.close()
   return(imagenes)
 
-def pae_results (pae1, pae2 = 0, substract=False): # dos strings con direcciones a archivos pae, pae2 es opcional. también admite dataframes
+def pae_results (pae1, pae2 = 0, substract=False): # two strings with dir to pae files, pae2 is optional. Also admits dataframes
   pae_data={}
   if type(pae1) == str:
     str1 = True
@@ -830,7 +781,7 @@ def pae_results (pae1, pae2 = 0, substract=False): # dos strings con direcciones
     dataf1=(pd.DataFrame(d1[0]["distance"]))
     pae_data[os.path.basename(pae1)] = dataf1
   else:
-    pae_data["protein 1"] = pae1 #se asume que es un dataframe json
+    pae_data["protein 1"] = pae1 #assumed to be a json dataframe
 
   import matplotlib as mpl
   with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
@@ -866,7 +817,7 @@ def get_plddt_files(dir = 'pdb_files'):
         with open(fichero) as fic:
           df67= pd.DataFrame(fic)
           dff=df67[0].str.split(expand=True)
-          CAr = dff[2] == "CA" #solo carbonos Alfa usados
+          CAr = dff[2] == "CA" #only Alpha carbons are used
           extCA = dff[CAr][10]
           imagenes[os.path.basename(fichero)]=extCA
           fic.close()
@@ -881,7 +832,7 @@ def plddt_results(plddt1, plddt2 = 0):
     str1 = False
     label1 = 'protein 1'
 
-  if type(plddt2) == int: #el 0 que se le dio 
+  if type(plddt2) == int: #no optional pLDDT file included
     plddt2_exist = False
   else:
     plddt2_exist = True
@@ -896,7 +847,7 @@ def plddt_results(plddt1, plddt2 = 0):
     with open(plddt1) as f1:
       df1=pd.DataFrame(f1)
       dff1=df1[0].str.split(expand=True)
-      CAr1 = dff1[2] == "CA" #solo carbonos Alfa usados
+      CAr1 = dff1[2] == "CA" #only Alpha carbons are used
       extCA1 = dff1[CAr1][10]
       plddt_data[label1]=extCA1
       f1.close()
@@ -912,13 +863,13 @@ def plddt_results(plddt1, plddt2 = 0):
       with open(plddt2) as f2:
         df2= pd.DataFrame(f2)
         dff2=df2[0].str.split(expand=True)
-        CAr2 = dff2[2] == "CA" #solo carbonos Alfa usados
+        CAr2 = dff2[2] == "CA" #only Alpha carbons are used
         extCA2 = dff2[CAr2][10]
         plddt_data[label2]=extCA2
         f2.close()
     else:
       plddt_data[label2]=plddt2
-    pay2=[] #segunda prot
+    pay2=[] #second prot
     for m in plddt_data[list(plddt_data)[1]]:
       l=float(m)
       pay2.append(l)
@@ -937,124 +888,106 @@ def plddt_results(plddt1, plddt2 = 0):
     plt.title('pLDDT comparation between predictions')
     plt.show()
 
-def superimpose_proteins(p1,p2): #Superposición de proteínas
-  #Agradecimientos a Anders Steen Christensen por el código: https://gist.github.com/andersx/6354971
-  pdb_parser = Bio.PDB.PDBParser() # Iniciar el parser
-  # Conseguir las estructuras
+def superimpose_proteins(p1,p2): #Protein superposition
+  #Thanks to Anders Steen Christensen for the code: https://gist.github.com/andersx/6354971
+  pdb_parser = Bio.PDB.PDBParser()
   ref_structure = pdb_parser.get_structure("reference", p1) 
   sample_structure = pdb_parser.get_structure("sample", p2)
 
-  # Por si acaso hay varios modelos, se elige el primero de cada pdb
-  # cambiar el valor de ser necesario manualmente!
+  # In case personalized results are loaded and there are various models, only the first is chosen
+  # change the value manually if needed!
   ref_model    = ref_structure[0]
   sample_model = sample_structure[0]
 
-  # Se hace una lista de los átomos (en las estructuras) que se desean alinear.
-  # En este caso se usan los átomos CA, Carbono Alfa
   ref_atoms = []
   sample_atoms = []
 
   for ref_chain in ref_model:
     for ref_res in ref_chain:
-      # Agregar los CA a la lista
       ref_atoms.append(ref_res['CA'])
 
-  # Hacer lo mismo para la estructura a modificar
   for sample_chain in sample_model:
     for sample_res in sample_chain:
       sample_atoms.append(sample_res['CA'])
 
       
-  #Pasando los arreglos a las versiones de numpy
+  #numpy works better so transforming
   ref_atoms = np.array(ref_atoms)
   sample_atoms = np.array(sample_atoms)
 
       
-  # Iniciamiento del superposicionador:
   super_imposer = Bio.PDB.Superimposer()
   super_imposer.set_atoms(ref_atoms, sample_atoms)
-  super_imposer.apply(sample_structure.get_atoms()) #afecta a la estructura original
+  super_imposer.apply(sample_structure.get_atoms()) #modifies the original variable
 
-  # Impresión del RMSD:
   print('Mean RMSD from the superimposition is:')
   print (str(super_imposer.rms) + ' Å')
 
-  # Almacenar la versión alineada de la proteína de ejemplo
-  io = Bio.PDB.PDBIO()
+  io = Bio.PDB.PDBIO() # Save the superimposed protein
 
   io.set_structure(sample_structure) 
   og_name = os.path.basename(p2)
   io.save(f"superimposed_{og_name[:-4]}.pdb")
   return f"superimposed_{og_name[:-4]}.pdb"
 
-def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, utilizar la proteína superpuesta como parámetro en p2
- #devuelve la lista con rmsd
+def calc_individual_rmsd(p1,p2, start=0, end=0): #for optimal results, use the superimposed protein as sample
 
-  #Para calcular el RMSD de carbonos individuales, es necesario extraer las coordenadas de ellos primero
+  #Get the coordinates first
 
-  pdb_parser = PDBParser() # Iniciar el parser
+  pdb_parser = PDBParser()
 
-  # Conseguir las estructuras
   ref_structure = pdb_parser.get_structure("reference", p1) 
   sample_structure = pdb_parser.get_structure("sample", p2)
-
-  # Por si acaso hay varios modelos, se elige el primero de cada pdb
-  # cambiar el valor de ser necesario manualmente! (o pasar como parámetro, quién sabe)
+  # In case personalized results are loaded and there are various models, only the first is chosen
+  # change the value manually if needed!
   ref_model    = ref_structure[0]
   sample_model = sample_structure[0]
 
-  # Se hace una lista de los átomos (en las estructuras) que se desean alinear.
-  # En este caso se usan los átomos CA, Carbono Alfa
   ref_atoms = []
   sample_atoms = []
 
   for ref_chain in ref_model:
     for ref_res in ref_chain:
-      # Agregar los CA a la lista
       ref_atoms.append(ref_res['CA'])
 
-  # Hacer lo mismo para la estructura de p2
   for sample_chain in sample_model:
     for sample_res in sample_chain:
       sample_atoms.append(sample_res['CA'])
 
-      
-  #Pasando los arreglos a las versiones de numpy
   ref_atoms = np.array(ref_atoms)
   sample_atoms = np.array(sample_atoms)
 
-
-  #Los carbonos de la proteína p1
+  #p1 atoms coords
   ref_atoms_coords = np.empty((1,3))
   for atom in ref_atoms:
       ref_atoms_coords = np.append(ref_atoms_coords, np.array([atom.get_coord()]), axis=0)
 
-  #Los carbonos de la proteína p2
+  #p2 atoms coords
   sample_atoms_coords = np.empty((1,3))
   for atom in sample_atoms:
       sample_atoms_coords = np.append(sample_atoms_coords, np.array([atom.get_coord()]), axis=0)
       
-  #calcular la distancia euclidiana/RMSD de carbonos individuales (y también el total para corroborar)
-  if end == 0: #si no se pasó el parámetro de end:
+  #calculate the euclidian distance/RMSD of individual carbons (and the total to check out)
+  if end == 0: #if end parameter was not passed:
    end = len(ref_atoms_coords)
   i=0
-  distancia_euclidiana=[] #Lista con las distancias, que será usada luego para el RMSD total
-  rmsd_individual=[] #Lista que contendrá las RMSD entre pares de carbonos individualmente
+  distancia_euclidiana=[] #List with distances, used for total RMSD
+  rmsd_individual=[] #List with individual RMSD between pair of atoms
   for atom in ref_atoms_coords:
       if i > start and i < end:
         distancia_euclidiana.append((atom[0] - sample_atoms_coords[i][0]) * (atom[0] - sample_atoms_coords[i][0]) + (atom[1] - sample_atoms_coords[i][1]) * (atom[1] - sample_atoms_coords[i][1]) + (atom[2] - sample_atoms_coords[i][2]) * (atom[2] - sample_atoms_coords[i][2]))
       i = i + 1
-      #En equivalencia: sumatoria de (Xip1 - Xip2)^2 donde i se refiere al index de los carbonos
+      #Equivalent: sumatory of (Xip1 - Xip2)^2 where i = carbon index
   distancia_euclidiana = np.array(distancia_euclidiana)
   distancia_euclidiana = distancia_euclidiana.reshape(-1,1)
   suma = 0
   i = 0
   len_dist = len(distancia_euclidiana)
   for i in range (len(distancia_euclidiana)):
-      rmsd_individual.append(math.sqrt(distancia_euclidiana[i])) #Raiz cuadrada de cada elemento de la lista para el RMSD
+      rmsd_individual.append(math.sqrt(distancia_euclidiana[i])) #square root of every element of the list for RMSD
       suma = suma + distancia_euclidiana[i] 
       
-  suma = math.sqrt(suma/len_dist) #Raiz cuadrada de la sumatoria de todas las distancias dividida la longitud de las proteínas
+  suma = math.sqrt(suma/len_dist) #Square root of the sumatory of all distances divided by protein length
   rmsd_individual = np.array(rmsd_individual)
   rmsd_individual = rmsd_individual.reshape(-1,1)
   import matplotlib as mpl
@@ -1066,7 +999,7 @@ def calc_individual_rmsd(p1,p2, start=0, end=0): #para resultados óptimos, util
     plt.title('Individual RMSD between CA atoms')
     plt.show()
     print("Mean RMSD:")
-    print(str(suma) + ' Å') #el rmsd total según la formula, ahora dando tal como en los otros métodos
+    print(str(suma) + ' Å') #total RMSD according to formula
   return rmsd_individual
 
 def molecular_weight(pdb):
