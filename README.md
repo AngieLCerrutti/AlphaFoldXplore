@@ -1,6 +1,6 @@
 # AlphaFoldXplore
 
-A Python interface to run [AlphaFold](https://github.com/deepmind/alphafold) and explore, analize and visualize their protein prediction results in a local-like environment. It's designed to minimize effort and resources.
+A Python interface to run [AlphaFold](https://github.com/deepmind/alphafold) to explore, analize and visualize their protein prediction results in a local-like environment. It's designed to minimize effort and resources.
 
 Up to now it's only available on Colab. It allows processing multifasta files holding sequences of length ≤ 600 AminoAcids.
 By uploadng a simple or multifasta file to the provided Colab and just pressing the "run" button, it will process all your sequences. Once finished, all the predictions and metrics will be downloaded to your local disk encapsulated into a Python object (please be sure to set up your browser to allow downloads).
