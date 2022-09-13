@@ -684,7 +684,7 @@ def run():
         if input_sing.endswith(".afxt"):
           print("Attempting to load a result...")
           return load(f"input/{input_sing}")
-        elif input_sing.endswith(".FASTA"):
+        elif input_sing.upper().endswith(".FASTA"):
           print("Attempting to predict proteins...")
           return predict(f"input/{input_sing}")
 
