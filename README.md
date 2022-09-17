@@ -52,11 +52,11 @@ For details about how the predictions work and what the results mean, see the [A
 
 ## Authors
 
-- Elmer Andrés Fernández - Original Idea - [Profile](https://www.researchgate.net/profile/Elmer-Fernandez-2) - CIDIE- [CONICET](https://www.conicet.gov.ar) - [UCC](http://www.ucc.edu.ar).
+- Elmer Andrés Fernández (PhD) - Original Idea - [Profile](https://www.researchgate.net/profile/Elmer-Fernandez-2) - CIDIE- [CONICET](https://www.conicet.gov.ar) - [UCC](http://www.ucc.edu.ar). Professor of Intelligent Systems @ UCC.
 - Juan Ignacio Folco - Developer and Maintainer - Universidad Católica de Córdoba.
 - Angie Lucía Cerrutti - Programming - Universidad Católica de Córdoba.
-- Verónica Baronetto - Advice - Universidad Católica de Córdoba.
-- Pablo Pastore - Advice - Universidad Católica de Córdoba.
+- Verónica Baronetto (PhD student)- Advice - Universidad Católica de Córdoba.
+- Pablo Pastore - Advice - Universidad Católica de Córdoba, Asistant Professor of Intelligent Systems @ UCC.
 
 
 ## Contributing
