@@ -124,9 +124,12 @@ def set_up():
   if "/content/tmp/bin" not in os.environ['PATH']:
     os.environ['PATH'] += ":/content/tmp/bin:/content/tmp/scripts"
 
-def predict(zfile): #se le pasa la dirección a un archivo FASTA
+def predict(zfile): #FASTA path inputted
   protein_count = 0
   TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
+  if sys.version_info[1] >= 10: #if python 3.10
+    import collections
+    collections.Iterable = collections.abc.Iterable #solve a compatibility issue
   import colabfold as cf
   from alphafold.data import pipeline
   from alphafold.common import protein
