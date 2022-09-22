@@ -126,7 +126,7 @@ def set_up():
 
 def predict(zfile): #FASTA path inputted
   os.environ['XLA_PYTHON_CLIENT_PREALLOCATE']='true'
-  os.environ[XLA_PYTHON_CLIENT_MEM_FRACTION]='.7'
+  os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION']='.7'
   protein_count = 0
   TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
   if sys.version_info[1] >= 10: #if python 3.10
