@@ -641,7 +641,7 @@ def predict(zfile): #FASTA path inputted
     files.download(f'{fastaname}_{dt_string}.afxt')
   for item in indiv_predic_list:
     shutil.rmtree(item)
-
+  print(f"Succesfully predicted all proteins of FASTA file. The following archive was downloaded on your local computer: \'{fastaname}_{dt_string}.afxt\'")
   return Z
 
 def load(filedir):
