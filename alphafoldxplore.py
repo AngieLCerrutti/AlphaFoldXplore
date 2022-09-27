@@ -126,6 +126,7 @@ def set_up():
 
 def predict(zfile): #FASTA path inputted
   protein_count = 0
+  fastaname = zfile[:-6]
   TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
   if sys.version_info[1] >= 10: #if python 3.10
     import collections
@@ -635,9 +636,9 @@ def predict(zfile): #FASTA path inputted
     os.system(f"mv {olddir} prediction_{dt_string}")
   os.system(f"mv {dt_string}_list.txt prediction_{dt_string}")
   os.system(f"zip -FSr -D {dt_string}.zip prediction_{dt_string}")
-  os.system(f"mv {dt_string}.zip {dt_string}.afxt")
+  os.system(f"mv {dt_string}.zip {fastaname}_{dt_string}.afxt")
   if 'COLAB_GPU' in os.environ:
-    files.download(f'{dt_string}.afxt')
+    files.download(f'{fastaname}_{dt_string}.afxt')
   for item in indiv_predic_list:
     shutil.rmtree(item)
 
