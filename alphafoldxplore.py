@@ -126,7 +126,6 @@ def set_up():
 
 def predict(zfile): #FASTA path inputted
   protein_count = 0
-  fastaname = zfile[:-6]
   TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
   if sys.version_info[1] >= 10: #if python 3.10
     import collections
@@ -155,6 +154,9 @@ def predict(zfile): #FASTA path inputted
   indiv_predic_list=[]
   now = datetime.now()
   dt_string = now.strftime("%Y%m%d%H%M%S")
+  zname = os.path.basename(zfile)
+  zname = zname[:-6].replace(" ", "")#hopefully it had a fasta extension
+  afxtname = f"{zname}_{dt_string}"
   from prediction_results import prediction_results
   for sec in d.items():
     protein_count = protein_count + 1
@@ -603,7 +605,7 @@ def predict(zfile): #FASTA path inputted
 
     stop = time.time()
     protein_name = str(og_jobname)
-    directory = f'prediction_{dt_string}/{output_dir}.zip'
+    directory = f'{afxtname}/{output_dir}.zip'
     time_spent = stop - start
     machine_info = subprocess.run(
         ["nvidia-smi", "--query-gpu=name,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used", "--format=csv,noheader"],
@@ -625,30 +627,31 @@ def predict(zfile): #FASTA path inputted
     gc.collect() #free memory to be able to run further iterations
     continue
 
-  with open(f'{dt_string}_list.txt', 'w', encoding='utf-8') as file:
+  with open(f'{afxtname}_list.txt', 'w', encoding='utf-8') as file:
       for result in list(Z.values()):
         file.write(f"{result.directory}\n")
       file.close()
-  os.makedirs(f"prediction_{dt_string}", exist_ok=True)
+  os.makedirs(f"{afxtname}", exist_ok=True)
   for i in range(len(list(Z.values()))):
     i1= i + 1
     olddir = Z[f'p{i1}'].directory.partition("/")[2]
-    os.system(f"mv {olddir} prediction_{dt_string}")
-  os.system(f"mv {dt_string}_list.txt prediction_{dt_string}")
-  os.system(f"zip -FSr -D {dt_string}.zip prediction_{dt_string}")
-  os.system(f"mv {dt_string}.zip {fastaname}_{dt_string}.afxt")
+    os.system(f"mv {olddir} {afxtname}")
+  os.system(f"mv {afxtname}_list.txt {afxtname}")
+  os.system(f"zip -FSr -D {afxtname}.zip {afxtname}")
+  os.system(f"mv {afxtname}.zip {afxtname}.afxt")
   if 'COLAB_GPU' in os.environ:
-    files.download(f'{fastaname}_{dt_string}.afxt')
+    files.download(f'{afxtname}.afxt')
+  print(f"Stored on your local computer. Name: \"{afxtname}.afxt'\"")
   for item in indiv_predic_list:
     shutil.rmtree(item)
-  print(f"Succesfully predicted all proteins of FASTA file. The following archive was downloaded on your local computer: \'{fastaname}_{dt_string}.afxt\'")
+
   return Z
 
 def load(filedir):
   from prediction_results import prediction_results
   Z = {}
   protein_count = 0
-  extract_folder = f"prediction_{os.path.basename(filedir[:-5])}"
+  extract_folder = os.path.basename(filedir[:-5])
   #os.makedirs(extract_folder, exist_ok=True)
   with ZipFile(filedir,'r') as fz:
     fz.extractall(".")
@@ -678,6 +681,7 @@ def load(filedir):
                     #details = pred_lines.values()
                     prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'))
                     Z[f'p{protein_count}'] = prediction_entry
+  print("Loaded successfully.")
   return Z
 
 def run():
@@ -685,7 +689,7 @@ def run():
     for input_sing in inputs:
       if os.path.isfile(input_sing) == True:
         input_sing = os.path.basename(input_sing)
-        if input_sing.endswith(".afxt"):
+        if input_sing.lower().endswith(".afxt"):
           print("Attempting to load a result...")
           return load(f"input/{input_sing}")
         elif input_sing.upper().endswith(".FASTA"):
@@ -698,7 +702,7 @@ def run():
     for input_sing in inputs:
       if os.path.isfile(input_sing) == True:
         input_sing = os.path.basename(input_sing)
-        if input_sing.endswith(".afxt"):
+        if input_sing.lower().endswith(".afxt"):
           return load(f"{input_sing}")
         elif input_sing.endswith(".FASTA"):
           return predict(f"{input_sing}")
