@@ -6,7 +6,10 @@ if 'COLAB_GPU' in os.environ:
   from google.colab import files #to download the predictions later if you're on Colab
 else:
   print('For best results install AlphaFoldXplore on a Colab machine.')
-  import nglview
+  try:
+    import nglview
+  catch:
+    pass
 import jax
 from IPython.utils import io
 import subprocess
