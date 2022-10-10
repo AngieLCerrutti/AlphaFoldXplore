@@ -8,7 +8,7 @@ else:
   print('For best results install AlphaFoldXplore on a Colab machine.')
   try:
     import nglview
-  catch:
+  except:
     pass
 import jax
 from IPython.utils import io
