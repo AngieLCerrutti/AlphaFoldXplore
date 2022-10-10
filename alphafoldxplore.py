@@ -11,7 +11,6 @@ else:
   except:
     pass
 import jax
-from IPython.utils import io
 import subprocess
 import tqdm.notebook
 import json
@@ -55,8 +54,7 @@ def set_up():
       raise RuntimeError('Colab TPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
     elif jax.local_devices()[0].platform == 'cpu':
       raise RuntimeError('Colab CPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
-
-  from IPython.utils import io
+      
   import tqdm.notebook
 
   GIT_REPO = 'https://github.com/deepmind/alphafold'
@@ -104,18 +102,11 @@ def set_up():
           os.system(f"curl -fsSL \"{SOURCE_URL}\" | tar x -C \"{PARAMS_DIR}\"")
           pbar.update(14+27)
 
-          #######################################################################
-          os.system("sudo apt install --quiet --yes hmmer")
-          pbar.update(3)
-
+          ######################################################################
           # Install py3dmol.
           os.system("pip install py3dmol")
           pbar.update(1)
 
-          # Create a ramdisk to store a database chunk to make Jackhmmer run fast.
-          os.system("sudo mkdir -m 777 --parents /tmp/ramdisk")
-          os.system("sudo mount -t tmpfs -o size=9G ramdisk /tmp/ramdisk")
-          pbar.update(1)
         else:
           pbar.update(55)
 
