@@ -650,7 +650,7 @@ def load(filedir):
   with ZipFile(filedir,'r') as fz:
     fz.extractall(".")
   
-  if os.isdir(extract_folder):
+  if os.path.isdir(extract_folder):
     pass
   else:
     os.system(f"cp -R prediction_{extract_folder} {extract_folder}") #compatibility with old afxt files
