@@ -653,7 +653,7 @@ def load(filedir):
   if os.isdir(extract_folder):
     continue
   else:
-    os.system(f"cp -R prediction_{extract_folder} {extract_folder}) #compatibility with old afxt files
+    os.system(f"cp -R prediction_{extract_folder} {extract_folder}") #compatibility with old afxt files
               
   for path in os.listdir(extract_folder):
     long_path = os.path.join(extract_folder, path)
