@@ -651,7 +651,7 @@ def load(filedir):
     fz.extractall(".")
   
   if os.isdir(extract_folder):
-    continue
+    pass
   else:
     os.system(f"cp -R prediction_{extract_folder} {extract_folder}") #compatibility with old afxt files
               
