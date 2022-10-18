@@ -62,7 +62,7 @@ def set_up():
   PARAMS_DIR = './alphafold/data/params'
   PARAMS_PATH = os.path.join(PARAMS_DIR, os.path.basename(SOURCE_URL))
   TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
-  
+  from IPython.utils import io
   # if not already installed
   try:
     total = 55
@@ -133,6 +133,7 @@ def predict(zfile): #FASTA path inputted
   from alphafold.model import config
   from alphafold.model import data
   from collections import defaultdict
+  from IPython.utils import io
   d = defaultdict(str)
   with open(zfile, "r") as file1:
     for line in file1:
