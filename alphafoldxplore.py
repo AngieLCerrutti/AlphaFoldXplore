@@ -814,7 +814,10 @@ def pae_results (pae1, pae2 = 0, substract=False): # two strings with dir to pae
         ax2.yaxis.tick_right()
     else:
       fig, (ax1) = plt.subplots(ncols=1)
-    sns.heatmap(df1, cmap="plasma"  , ax=ax1)
+    if substract:
+      sns.heatmap(df1, cmap="PuOr"  , ax=ax1)
+    else:
+      sns.heatmap(df1, cmap="plasma"  , ax=ax1)
     plt.show()
 
 def get_plddt_files(dir = 'pdb_files'):
