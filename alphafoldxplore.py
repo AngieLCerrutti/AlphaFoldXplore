@@ -694,7 +694,6 @@ def run():
           input_sing = os.path.basename(input_sing)
           if input_sing.lower().endswith(".afxt"):
             print("Attempting to load a result...")
-            switch:
             if i==0:
               return load(f"input/{input_sing}")
             else:
