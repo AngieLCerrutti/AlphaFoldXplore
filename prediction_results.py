@@ -22,38 +22,67 @@ class prediction_results:
     def add_machine_details(self, x):
       self.machine_details = x
 
-    def plot_pae(self, p2=None, substract=None): #p2 must be another prediction_results object
+    def plot_pae(self, p2=None, substract=None): #p2 must be another prediction_results object or a dict
       afx.clean()
       afx.extract_zip(self.directory)
-      pae_file1 = afx.get_pae_files()
+      names = []
+      names.append(self.name)
       if not substract:
         substract = False
       if p2:
-        if isinstance(p2, prediction_results):
-          afx.clean()
+        if isinstance(p2, type(self)):
           afx.extract_zip(p2.directory)
-          pae_file2 = afx.get_pae_files()
-          afx.pae_results(pae_file1[list(pae_file1)[0]],pae_file2[list(pae_file2)[0]], substract)
+          pae_dict = afx.get_pae_files()
+          names.append(p2.name)
+          afx.pae_results(pae_dict[f'{self.name}_pae.json'],pae_dict[f'{p2.name}_pae.json'], names=names, substract=substract)
         else:
-          print("P2 does not have the correct type. Defaulting to single plot.")
-          afx.pae_results(pae_file1[list(pae_file1)[0]])
+          pae_dict = {}
+          if isinstance(p2, dict): #is it a dict?
+            print("dict compatibility WIP")
+            pass
+            for p in p2.values():
+              if p.name != self.name:
+                afx.extract_zip(p.directory)
+                names.append(p.name)
+            pae_dict = afx.get_pae_files()
+            afx.pae_results(pae_dict[f'{self.name}_pae.json'],pae_dict, names=names, substract=substract)
+          else:
+            print("P2 does not have the correct type. Defaulting to single plot.")
+            pae_dict = afx.get_pae_files()
+            afx.pae_results(pae_dict[f'{self.name}_pae.json'], names=names)
       else:
-        afx.pae_results(pae_file1[list(pae_file1)[0]])
+        afx.pae_results(pae_dict[f'{self.name}_pae.json'],names=names)
       afx.clean()
 
     def plot_plddt(self, p2=None): #p2 must be another prediction_results object
       afx.clean()
       afx.extract_zip(self.directory)
-      plddt_file1 = afx.get_plddt_files()
+      names = []
+      names.append(self.name)
       if p2:
-        afx.clean()
-        afx.extract_zip(p2.directory)
-        plddt_file2 = afx.get_plddt_files()
-        afx.plddt_results(plddt_file1[list(plddt_file1)[0]],plddt_file2[list(plddt_file2)[0]])
+        if isinstance(p2, type(self)):
+          afx.extract_zip(p2.directory)
+          plddt_dict = afx.get_plddt_files()
+          names.append(p2.name)
+          afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict[f'{p2.name}_unrelaxed.pdb'], names=names)
+        else:
+          plddt_dict = {}
+          if isinstance(p2, dict): #is it a dict?
+            for p in p2.values():
+              if p.name != self.name:
+                afx.extract_zip(p.directory)
+                names.append(p.name)
+            plddt_dict = afx.get_plddt_files()
+            afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict, names=names)
+          else:
+            print("P2 does not have the correct type. Defaulting to single unit.")
+            plddt_dict = afx.get_pae_files()
+            afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],names=names)
       else:
-        afx.plddt_results(plddt_file1[list(plddt_file1)[0]])
+        plddt_dict = afx.get_pae_files()
+        afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],names=names)
       afx.clean()
-    
+
     def fit(self, p2): #p2 is fit to p1
       dir_1, dir_2 = self.get_pdbs(p2)
       new_directory = afx.superimpose_proteins(dir_1,dir_2)
@@ -62,22 +91,38 @@ class prediction_results:
       return prediction_results(f"Superimposed {p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
 
     def rmsd(self, p2, start=0, end=0):
+      names = []
+      names.append(self.name)
       dir_1, dir_2 = self.get_pdbs(p2)
-      return afx.calc_individual_rmsd(dir_1, dir_2, start, end)
+      if isinstance(p2, dict):
+        for p in p2.values():
+          if p.name != self.name:
+            names.append(p.name)
+      else:
+        names.append(p2.name)
+      return afx.calc_individual_rmsd(dir_1, dir_2, start, end, names=names)
 
-    def get_pdbs(self, p2 = 0): #not plddt nor pae
+    def get_pdbs(self, p2 = None): #not plddt nor pae
       afx.clean()
       afx.extract_zip(self.directory)
-      with os.scandir("pdb_files") as pdbs:
-        for pdb in pdbs:
-          dir_1 = pdb.path
-      if type(p2) != int:
-        afx.clean()
-        afx.extract_zip(p2.directory)
-        with os.scandir("pdb_files") as pdbs:
-          for pdb in pdbs:
-            dir_2 = pdb.path
-        afx.extract_zip(self.directory)
+      dir_1 = f"pdb_files/{self.name}_unrelaxed.pdb"
+      if p2:
+        if isinstance(p2, type(self)):
+          afx.extract_zip(p2.directory)
+          dir_2 = f"pdb_files/{p2.name}_unrelaxed.pdb"
+        else:
+          if isinstance(p2, dict): #is it a dict?
+            for p in p2.values():
+              if p.name != self.name:
+                afx.extract_zip(p.directory)
+            ficheros = filter(os.path.isfile, os.scandir("pdb_files"))
+            ficheros = [os.path.realpath(f) for f in ficheros] # add path to each file
+            ficheros.sort(key=os.path.getmtime)
+            print(ficheros)
+            dir_2 = ficheros
+          else:
+            print("P2 does not have the correct type. Defaulting to single unit.")
+            return dir_1
       else:
       	return dir_1
       return dir_1, dir_2

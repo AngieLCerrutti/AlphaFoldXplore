@@ -223,8 +223,8 @@ def predict(zfile): #FASTA path inputted
     if len(full_sequence) > MAX_SEQUENCE_LENGTH:
       raise Exception(f'Input sequence is too long: {len(full_sequence)} amino acids, while the maximum is {MAX_SEQUENCE_LENGTH}. Please use the full AlphaFold system for long sequences.')
 
-    if len(full_sequence) >= 650:
-      print(f"WARNING: For a typical Google-Colab-GPU (12G) session, the max total length is ~650 residues. You are at {len(full_sequence)}! Running Alphafold may cause crashes.")
+    if len(full_sequence) >= 600:
+      print(f"WARNING: For a typical Google-Colab-GPU (12G) session, the max guaranteed length is ~600 residues. You are at {len(full_sequence)}! Running Alphafold may cause crashes.")
 
     print(f"total_length: '{len(full_sequence)}'") 
     print(f"working_directory: '{output_dir}'")    
@@ -685,28 +685,25 @@ def load(filedir):
   return Z
 
 def run():
-  with os.scandir("input") as inputs:
-    for input_sing in inputs:
-      if os.path.isfile(input_sing) == True:
-        input_sing = os.path.basename(input_sing)
-        if input_sing.lower().endswith(".afxt"):
-          print("Attempting to load a result...")
-          return load(f"input/{input_sing}")
-        elif input_sing.upper().endswith(".FASTA"):
-          print("Attempting to predict proteins...")
-          return predict(f"input/{input_sing}")
-
-  print("No file was found in the input folder. Reading from the main folder...")
-
-  with os.scandir(".") as inputs:
-    for input_sing in inputs:
-      if os.path.isfile(input_sing) == True:
-        input_sing = os.path.basename(input_sing)
-        if input_sing.lower().endswith(".afxt"):
-          return load(f"{input_sing}")
-        elif input_sing.endswith(".FASTA"):
-          return predict(f"{input_sing}")
-  raise Exception("Error: no valid file found.")
+  searching_folder = "input"
+  i = 0
+  while True:
+    with os.scandir(searching_folder) as inputs:
+      for input_sing in inputs:
+        if os.path.isfile(input_sing) == True:
+          input_sing = os.path.basename(input_sing)
+          if input_sing.lower().endswith(".afxt"):
+            print("Attempting to load a result...")
+            return load(f"input/{input_sing}")
+          elif input_sing.upper().endswith(".FASTA"):
+            print("Attempting to predict proteins...")
+            return predict(f"input/{input_sing}")
+    if i == 0:
+      print("No file was found in the input folder. Reading from the main folder...")
+      searching_folder = "."
+      i += 1
+    else:
+      raise Exception("Error: no valid file found. (is it on the appropiate folders?)")
 
 ###########################################################################
 ##The end user is not meant to use the following fuctions. For ease of simplification refer to the above ones
@@ -755,141 +752,114 @@ def clean(): #erases the folders by extract_zip and so. Meant to be used silentl
     pass
 
 def get_pae_files(dir = "json_files"): #returns a dict with pae data
-  with os.scandir(dir) as ficheros:
-    imagenes={}
-    for fichero in ficheros:
-      if os.path.isfile(fichero) == True:
-        with open(fichero) as f:
-          d=json.load(f)
-          dataf=(pd.DataFrame(d[0]["distance"]))
-          imagenes[os.path.basename(fichero)] = dataf
-        f.close()
+  ficheros = filter(os.path.isfile, os.scandir(dir))
+  ficheros = [os.path.realpath(f) for f in ficheros] # add path to each file
+  ficheros.sort(key=os.path.getmtime)
+  imagenes={}
+  for fichero in ficheros:
+    with open(fichero) as f:
+      d=json.load(f)
+      dataf=(pd.DataFrame(d[0]["distance"]))
+      imagenes[os.path.basename(fichero)] = dataf
+    f.close()
   return(imagenes)
 
-def pae_results (pae1, pae2 = 0, substract=False): # two strings with dir to pae files, pae2 is optional. Also admits dataframes
+def pae_results (pae1, pae2 = 0, names=[], substract=False): 
   pae_data={}
-  if type(pae1) == str:
-    str1 = True
-  else:
-    str1 = False
-
-  if type(pae2) == int:
+  if type(pae2) == int: #not added
     pae2_exist = False
   else:
     pae2_exist = True
-    if type(pae2) == str:
-      str2 = True
-    else:
-      str2 = False
+    str2 = False
 
-  if str1:
-    f1 = open(pae1)
-    d1=json.load(f1)
-    f1.close()
-    dataf1=(pd.DataFrame(d1[0]["distance"]))
-    pae_data[os.path.basename(pae1)] = dataf1
-  else:
-    pae_data["protein 1"] = pae1 #assumed to be a json dataframe
+  pae_data[names[0]] = pae1 #assumed to be a json dataframe
 
   import matplotlib as mpl
   with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
     df1=(pae_data[list(pae_data)[0]])
     if pae2_exist:
-      if str2:
-        f2 = open(pae2)
-        d2=json.load(f2)
-        f2.close()
-        dataf2=(pd.DataFrame(d2[0]["distance"]))
-        pae_data[os.path.basename(pae2)] = dataf2
-      else:
-        pae_data["Protein 2"] = pae2
+      pae_data[names[1]] = pae2
       df2=(pae_data[list(pae_data)[1]])
       if substract:
         fig, (ax1) = plt.subplots(ncols=1)
         df1 = df1 - df2
+        cpalette = "PuOr"
       else:
         fig, (ax1, ax2) = plt.subplots(ncols=2)
         fig.subplots_adjust(wspace=0.1)
-        sns.heatmap(df2, cmap="plasma", ax=ax2)
+        cpalette = "plasma"
+        sns.heatmap(df2, cmap=cpalette, ax=ax2)
         ax2.yaxis.tick_right()
     else:
       fig, (ax1) = plt.subplots(ncols=1)
-    if substract:
-      sns.heatmap(df1, cmap="PuOr"  , ax=ax1)
-    else:
-      sns.heatmap(df1, cmap="plasma"  , ax=ax1)
+    sns.heatmap(df1, cmap=cpalette  , ax=ax1)
     plt.show()
 
 def get_plddt_files(dir = 'pdb_files'):
-  with os.scandir(dir) as ficheros:
-    imagenes={}
-    for fichero in ficheros:
-      if os.path.isfile(fichero) == True:
-        with open(fichero) as fic:
-          df67= pd.DataFrame(fic)
-          dff=df67[0].str.split(expand=True)
-          CAr = dff[2] == "CA" #only Alpha carbons are used
-          extCA = dff[CAr][10]
-          imagenes[os.path.basename(fichero)]=extCA
-          fic.close()
+  ficheros = filter(os.path.isfile, os.scandir(dir))
+  ficheros = [os.path.realpath(f) for f in ficheros] # add path to each file
+  ficheros.sort(key=os.path.getmtime)
+  imagenes={}
+  for fichero in ficheros:
+    with open(fichero) as fic:
+      df67= pd.DataFrame(fic)
+      dff=df67[0].str.split(expand=True)
+      CAr = dff[2] == "CA" #only Alpha carbons are used
+      extCA = dff[CAr][10]
+      imagenes[os.path.basename(fichero)]=extCA
+      fic.close()
   return(imagenes)
 
-def plddt_results(plddt1, plddt2 = 0):
+def plddt_results(plddt1, plddt2 = 0, names=[]):
   plddt_data={}
-  if type(plddt1) == str:
-    str1 = True
-    label1 = os.path.basename(plddt1)
-  else:
-    str1 = False
-    label1 = 'protein 1'
-
+  label1 = names[0]
   if type(plddt2) == int: #no optional pLDDT file included
     plddt2_exist = False
   else:
     plddt2_exist = True
-    if type(plddt2) == str:
-      str2 = True
-      label2 = os.path.basename(plddt2)
+    if isinstance(plddt2, dict):
+      is_dict = True
     else:
-      str2 = False
-      label2 = 'protein 2'
+      is_dict = False
+      label2 = names[1]
 
-  if str1:
-    with open(plddt1) as f1:
-      df1=pd.DataFrame(f1)
-      dff1=df1[0].str.split(expand=True)
-      CAr1 = dff1[2] == "CA" #only Alpha carbons are used
-      extCA1 = dff1[CAr1][10]
-      plddt_data[label1]=extCA1
-      f1.close()
-  else:
-    plddt_data[label1]=plddt1
   pay1=[] #primera prot
-  for m in plddt_data[list(plddt_data)[0]]:
+  for m in plddt1:
     l=float(m)
     pay1.append(l)
 
   if plddt2_exist:
-    if str2:
-      with open(plddt2) as f2:
-        df2= pd.DataFrame(f2)
-        dff2=df2[0].str.split(expand=True)
-        CAr2 = dff2[2] == "CA" #only Alpha carbons are used
-        extCA2 = dff2[CAr2][10]
-        plddt_data[label2]=extCA2
-        f2.close()
+    if is_dict:
+      list_of_all = []
+      for plddt in plddt2.values():
+        pay=[]
+        for m in plddt:
+          l=float(m)
+          pay.append(l)
+        list_of_all.append(pay)
     else:
-      plddt_data[label2]=plddt2
-    pay2=[] #second prot
-    for m in plddt_data[list(plddt_data)[1]]:
-      l=float(m)
-      pay2.append(l)
+      pay2=[] #second prot
+      for m in plddt2:
+        l=float(m)
+        pay2.append(l)
+
+
   import matplotlib as mpl
   with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
     if plddt2_exist:  
-      df1 = pd.DataFrame(list(zip(pay1,pay2)), columns = ["m1","m2"])
-      plt.plot(df1['m1'], label=label1)
-      plt.plot(df1['m2'], label=label2)
+      if is_dict:
+        df = pd.DataFrame(list(zip(pay1)), columns = ["m1"])
+        plt.plot(df['m1'], label=names[0])
+        i=0
+        for item in list_of_all:
+          if i>0:
+            df1 = pd.DataFrame(list(zip(item)), columns = ["m1"])
+            plt.plot(df1['m1'], label=names[i])
+          i += 1
+      else:
+        df1 = pd.DataFrame(list(zip(pay1,pay2)), columns = ["m1","m2"])
+        plt.plot(df1['m1'], label=label1)
+        plt.plot(df1['m2'], label=label2)
     else:
       df1 = pd.DataFrame(list(zip(pay1)), columns = ["m1"])
       plt.plot(df1['m1'], label=label1)
@@ -941,77 +911,86 @@ def superimpose_proteins(p1,p2): #Protein superposition
   io.save(f"superimposed_{og_name[:-4]}.pdb")
   return f"superimposed_{og_name[:-4]}.pdb"
 
-def calc_individual_rmsd(p1,p2, start=0, end=0): #for optimal results, use the superimposed protein as sample
+def calc_individual_rmsd(p1,p2, start=0, end=0, names=[]): #for optimal results, use the superimposed protein as sample
 
   #Get the coordinates first
 
   pdb_parser = PDBParser()
 
   ref_structure = pdb_parser.get_structure("reference", p1) 
-  sample_structure = pdb_parser.get_structure("sample", p2)
   # In case personalized results are loaded and there are various models, only the first is chosen
   # change the value manually if needed!
-  ref_model    = ref_structure[0]
-  sample_model = sample_structure[0]
-
+  ref_model = ref_structure[0]
   ref_atoms = []
-  sample_atoms = []
-
   for ref_chain in ref_model:
     for ref_res in ref_chain:
       ref_atoms.append(ref_res['CA'])
-
-  for sample_chain in sample_model:
-    for sample_res in sample_chain:
-      sample_atoms.append(sample_res['CA'])
-
   ref_atoms = np.array(ref_atoms)
-  sample_atoms = np.array(sample_atoms)
-
   #p1 atoms coords
   ref_atoms_coords = np.empty((1,3))
   for atom in ref_atoms:
       ref_atoms_coords = np.append(ref_atoms_coords, np.array([atom.get_coord()]), axis=0)
-
-  #p2 atoms coords
-  sample_atoms_coords = np.empty((1,3))
-  for atom in sample_atoms:
-      sample_atoms_coords = np.append(sample_atoms_coords, np.array([atom.get_coord()]), axis=0)
-      
-  #calculate the euclidian distance/RMSD of individual carbons (and the total to check out)
-  if end == 0: #if end parameter was not passed:
-   end = len(ref_atoms_coords)
-  i=0
-  distancia_euclidiana=[] #List with distances, used for total RMSD
-  rmsd_individual=[] #List with individual RMSD between pair of atoms
-  for atom in ref_atoms_coords:
-      if i > start and i < end:
-        distancia_euclidiana.append((atom[0] - sample_atoms_coords[i][0]) * (atom[0] - sample_atoms_coords[i][0]) + (atom[1] - sample_atoms_coords[i][1]) * (atom[1] - sample_atoms_coords[i][1]) + (atom[2] - sample_atoms_coords[i][2]) * (atom[2] - sample_atoms_coords[i][2]))
-      i = i + 1
-      #Equivalent: sumatory of (Xip1 - Xip2)^2 where i = carbon index
-  distancia_euclidiana = np.array(distancia_euclidiana)
-  distancia_euclidiana = distancia_euclidiana.reshape(-1,1)
-  suma = 0
-  i = 0
-  len_dist = len(distancia_euclidiana)
-  for i in range (len(distancia_euclidiana)):
-      rmsd_individual.append(math.sqrt(distancia_euclidiana[i])) #square root of every element of the list for RMSD
-      suma = suma + distancia_euclidiana[i] 
-      
-  suma = math.sqrt(suma/len_dist) #Square root of the sumatory of all distances divided by protein length
-  rmsd_individual = np.array(rmsd_individual)
-  rmsd_individual = rmsd_individual.reshape(-1,1)
+  
   import matplotlib as mpl
+  rmsd_list = []
   with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
-    plt.plot(rmsd_individual, label=f"{os.path.basename(p1)} + {os.path.basename(p2)}")
+    if isinstance(p2, list):
+      amount = len(p2)
+    else:
+      temp = []
+      temp.append("null")
+      temp.append(p2)
+      p2 = temp
+      amount = 2 #the reference + sample
+    j = 1
+    while j < amount:
+      try:
+        sample_structure = pdb_parser.get_structure("sample", p2[j])
+      except:
+        sample_structure = pdb_parser.get_structure("sample", f"superimposed_{os.path.basename(p2[j])[13:]}")
+      sample_model = sample_structure[0]
+      sample_atoms = []
+      for sample_chain in sample_model:
+        for sample_res in sample_chain:
+          sample_atoms.append(sample_res['CA'])
+      sample_atoms = np.array(sample_atoms)
+      sample_atoms_coords = np.empty((1,3))
+      for atom in sample_atoms:
+        sample_atoms_coords = np.append(sample_atoms_coords, np.array([atom.get_coord()]), axis=0)
+
+      #calculate the euclidian distance/RMSD of individual carbons (and the total to check out)
+      if end == 0: #if end parameter was not passed:
+       end = len(ref_atoms_coords)
+      i=0
+      distancia_euclidiana=[] #List with distances, used for total RMSD
+      rmsd_individual=[] #List with individual RMSD between pair of atoms
+      for atom in ref_atoms_coords:
+          if i > start and i < end:
+            distancia_euclidiana.append((atom[0] - sample_atoms_coords[i][0]) * (atom[0] - sample_atoms_coords[i][0]) + (atom[1] - sample_atoms_coords[i][1]) * (atom[1] - sample_atoms_coords[i][1]) + (atom[2] - sample_atoms_coords[i][2]) * (atom[2] - sample_atoms_coords[i][2]))
+          i = i + 1
+          #Equivalent: sumatory of (Xip1 - Xip2)^2 where i = carbon index
+      distancia_euclidiana = np.array(distancia_euclidiana)
+      distancia_euclidiana = distancia_euclidiana.reshape(-1,1)
+      suma = 0
+      i = 0
+      len_dist = len(distancia_euclidiana)
+      for i in range (len(distancia_euclidiana)):
+          rmsd_individual.append(math.sqrt(distancia_euclidiana[i])) #square root of every element of the list for RMSD
+          suma = suma + distancia_euclidiana[i]  
+      suma = math.sqrt(suma/len_dist) #Square root of the sumatory of all distances divided by protein length
+      rmsd_individual = np.array(rmsd_individual)
+      rmsd_individual = rmsd_individual.reshape(-1,1)
+      rmsd_list.append(rmsd_individual)
+      plt.plot(rmsd_individual, label=f"{names[0]} + {names[j]}")
+      print(f"Mean RMSD of {names[0]} + {names[j]}:")
+      print(str(suma) + ' Å') #total RMSD according to formula
+      j += 1
     plt.legend(loc='upper left')
     plt.xlabel('Index')
     plt.ylabel('RMSD')
     plt.title('Individual RMSD between CA atoms')
     plt.show()
-    print("Mean RMSD:")
-    print(str(suma) + ' Å') #total RMSD according to formula
-  return rmsd_individual
+  return rmsd_list
 
 def molecular_weight(pdb):
   from Bio import SeqIO
