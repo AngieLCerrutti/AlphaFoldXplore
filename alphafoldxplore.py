@@ -694,10 +694,17 @@ def run():
           input_sing = os.path.basename(input_sing)
           if input_sing.lower().endswith(".afxt"):
             print("Attempting to load a result...")
-            return load(f"input/{input_sing}")
+            switch:
+            if i==0:
+              return load(f"input/{input_sing}")
+            else:
+              return load(f"{input_sing}")
           elif input_sing.upper().endswith(".FASTA"):
             print("Attempting to predict proteins...")
-            return predict(f"input/{input_sing}")
+            if i==0:
+              return predict(f"input/{input_sing}")
+            else:
+              return predict(f"{input_sing}")
     if i == 0:
       print("No file was found in the input folder. Reading from the main folder...")
       searching_folder = "."
