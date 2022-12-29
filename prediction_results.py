@@ -84,11 +84,32 @@ class prediction_results:
       afx.clean()
 
     def fit(self, p2): #p2 is fit to p1
+      names = []
+      names.append(self.name)
       dir_1, dir_2 = self.get_pdbs(p2)
-      new_directory = afx.superimpose_proteins(dir_1,dir_2)
-      afx.clean()
-      os.system(f"zip -FS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
-      return prediction_results(f"Superimposed {p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
+      
+      if isinstance(p2, type(self)):
+        new_directory = afx.superimpose_proteins(dir_1,dir_2)
+        afx.clean()
+        os.system(f"zip -FS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
+        return prediction_results(f"Superimposed {p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
+      
+      elif isinstance(p2, dict):
+        superimposed_dict = {}
+        i = 0
+        for p in p2.values():
+          if p.name != self.name:
+            new_directory = afx.superimpose_proteins(dir_1,dir_2[i])
+            os.system(f"zip -FS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
+            superimposed_dict[p.name] = prediction_results(f"Superimposed {p.name}", f"{new_directory[:-4]}.zip") #a new file with the data
+            i = i + 1
+          else:
+            i = i + 1
+        return superimposed_dict
+
+
+
+
 
     def rmsd(self, p2, start=0, end=0):
       names = []
