@@ -62,7 +62,7 @@ For details about how the predictions work and what the results mean, see the [A
 ## Contributing
 
 To *contribute*, do the following:
-* Contact efernandez at cidie . ucc . edu . ar
+* Contact efernandez (Idea and Development) at elmer .  fernandez - at unc . edu .er
 * Open an issue to discuss possible changes or ask questions
 * Create a *fork* of the project
 * Create a new *branch* and push your changes
