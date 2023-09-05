@@ -42,6 +42,7 @@ import seaborn as sns
 from datetime import datetime
 import shutil
 import prediction_results
+import re
 os.makedirs("input", exist_ok=True)
 
 def set_up():
@@ -477,7 +478,13 @@ def predict(zfile): #FASTA path inputted
         pbar.update(n=1)
         o = outs[key]
         line = f"{key} recycles:{o['recycles']} tol:{o['tol']:.2f} pLDDT:{o['pLDDT']:.2f}"
-        if use_ptm: line += f" pTMscore:{o['pTMscore']:.2f}"
+        if use_ptm: 
+          line += f" pTMscore:{o['pTMscore']:.2f}"
+          ptm = '{0:.2f}'.format(o['pTMscore'])
+        else:
+          ptm = 0
+        return ptm
+
         print(line)
         if show_images:
           fig = cf.plot_protein(o['unrelaxed_protein'], Ls=Ls_plot, dpi=100)
@@ -518,7 +525,8 @@ def predict(zfile): #FASTA path inputted
               # save results
               outs[key] = parse_results(prediction_result, processed_feature_dict)
               outs[key].update({"recycles":r, "tol":t})
-              report(key)
+              ptm = report(key)
+              outs[key].update({"ptm":ptm})
 
               del prediction_result, params
             del sampled_feats_dict, processed_feature_dict
@@ -542,7 +550,8 @@ def predict(zfile): #FASTA path inputted
             prediction_result, (r, t) = cf.to(model_runner.predict(processed_feature_dict, random_seed=seed),"cpu")
             outs[key] = parse_results(prediction_result, processed_feature_dict)
             outs[key].update({"recycles":r, "tol":t})
-            report(key)
+            ptm = report(key)
+            outs[key].update({"ptm":ptm})
 
             # cleanup
             del processed_feature_dict, prediction_result
@@ -576,6 +585,7 @@ def predict(zfile): #FASTA path inputted
 
     for n,key in enumerate(model_rank):    
         pae = outs[key]["pae"]
+        ptm = outs[key]["ptm"]
         max_pae = pae.max()
         pae_output_path = os.path.join(output_dir,f'{og_jobname}_pae.json')
         rounded_errors = np.round(np.array(pae), decimals= 1)
@@ -613,6 +623,8 @@ def predict(zfile): #FASTA path inputted
       file.write(directory + '\n')
       file.write(str(time_spent) + '\n')
       file.write(machine_info)
+      file.write("pTMScore=" + ptm + '\n')
+      file.write("version=afxl")
       file.close()
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
     #if 'COLAB_GPU' in os.environ:
@@ -677,9 +689,14 @@ def load(filedir):
                     #zip_info.filename = os.path.basename(zip_info.filename)
                     with fz.open(zip_info.filename) as pred_info:
                       pred_lines = pred_info.readlines()
+                      uncut_pred_lines = pred_info.read()
                       pred_info.close()
                     #details = pred_lines.values()
-                    prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'))
+                    try:
+                      ptmscore = float(re.findall(r"pTMScore=?([ \d.]+)",uncut_pred_lines)[0])
+                    except:
+                      ptmscore = 0
+                    prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'),ptmscore)
                     Z[f'p{protein_count}'] = prediction_entry
   print("Loaded successfully.")
   return Z
@@ -874,8 +891,10 @@ def plddt_results(plddt1, plddt2 = 0, names=[]):
     plt.ylabel('pLDDT%')
     plt.title('pLDDT comparation between predictions')
     plt.show()
+    if is_dict:
+      return list_of_all
 
-def superimpose_proteins(p1,p2): #Protein superposition
+def superimpose_proteins(p1,p2, silent=False): #Protein superposition
   #Thanks to Anders Steen Christensen for the code: https://gist.github.com/andersx/6354971
   pdb_parser = Bio.PDB.PDBParser()
   ref_structure = pdb_parser.get_structure("reference", p1) 
@@ -907,8 +926,9 @@ def superimpose_proteins(p1,p2): #Protein superposition
   super_imposer.set_atoms(ref_atoms, sample_atoms)
   super_imposer.apply(sample_structure.get_atoms()) #modifies the original variable
 
-  print('Mean RMSD from the superimposition is:')
-  print (str(super_imposer.rms) + ' Å')
+  if not silent:
+    print('Mean RMSD from the superimposition is:')
+    print (str(super_imposer.rms) + ' Å')
 
   io = Bio.PDB.PDBIO() # Save the superimposed protein
 
@@ -917,7 +937,7 @@ def superimpose_proteins(p1,p2): #Protein superposition
   io.save(f"superimposed_{og_name[:-4]}.pdb")
   return f"superimposed_{og_name[:-4]}.pdb"
 
-def calc_individual_rmsd(p1,p2, start=0, end=0, names=[]): #for optimal results, use the superimposed protein as sample
+def calc_individual_rmsd(p1,p2, start=0, end=0, names=[], returning="aadistance", silent=False): #for optimal results, use the superimposed protein as sample
 
   #Get the coordinates first
 
@@ -939,6 +959,7 @@ def calc_individual_rmsd(p1,p2, start=0, end=0, names=[]): #for optimal results,
   
   import matplotlib as mpl
   rmsd_list = []
+  true_rmsd_list = []
   with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}):
     if isinstance(p2, list):
       amount = len(p2)
@@ -987,16 +1008,99 @@ def calc_individual_rmsd(p1,p2, start=0, end=0, names=[]): #for optimal results,
       rmsd_individual = np.array(rmsd_individual)
       rmsd_individual = rmsd_individual.reshape(-1,1)
       rmsd_list.append(rmsd_individual)
-      plt.plot(rmsd_individual, label=f"{names[0]} + {names[j]}")
-      print(f"Mean RMSD of {names[0]} + {names[j]}:")
-      print(str(suma) + ' Å') #total RMSD according to formula
+      if not silent:
+        plt.plot(rmsd_individual, label=f"{names[0]} + {names[j]}")
+        print(f"Mean RMSD of {names[0]} + {names[j]}:")
+        print(str(suma) + ' Å') #total RMSD according to formula
       j += 1
-    plt.legend(loc='upper left')
-    plt.xlabel('Index')
-    plt.ylabel('RMSD')
-    plt.title('Individual RMSD between CA atoms')
-    plt.show()
-  return rmsd_list
+      true_rmsd_list.append(suma)
+    if not silent:
+      plt.legend(loc='upper left')
+      plt.xlabel('Index')
+      plt.ylabel('RMSD')
+      plt.title('Individual RMSD between CA atoms')
+      plt.show()
+  if returning == "aadistance":
+    return rmsd_list
+  else:
+    return true_rmsd_list
+
+def calc_tmscore(p1,p2, names=[], silent=False): #for optimal results, use the superimposed protein as sample
+  #Get the coordinates first
+  pdb_parser = PDBParser()
+  ref_structure = pdb_parser.get_structure("reference", p1) 
+  # In case personalized results are loaded and there are various models, only the first is chosen
+  # change the value manually if needed!
+  ref_model = ref_structure[0]
+  ref_atoms = []
+  for ref_chain in ref_model:
+    for ref_res in ref_chain:
+      ref_atoms.append(ref_res['CA'])
+  ref_atoms = np.array(ref_atoms)
+  #p1 atoms coords
+  ref_atoms_coords = np.empty((1,3))
+  for atom in ref_atoms:
+      ref_atoms_coords = np.append(ref_atoms_coords, np.array([atom.get_coord()]), axis=0)
+  import matplotlib as mpl
+  tmscore_list = []
+  with mpl.rc_context({'figure.figsize': [15, 6],"figure.autolayout": True}): # if I need it?
+    if isinstance(p2, list):
+      amount = len(p2)
+    else:
+      temp = []
+      temp.append("null")
+      temp.append(p2)
+      p2 = temp
+      amount = 2 #the reference + sample
+    j = 1
+
+    while j < amount:
+      try:
+        sample_structure = pdb_parser.get_structure("sample", p2[j])
+      except:
+        sample_structure = pdb_parser.get_structure("sample", f"superimposed_{os.path.basename(p2[j])[13:]}")
+      sample_model = sample_structure[0]
+      sample_atoms = []
+      for sample_chain in sample_model:
+        for sample_res in sample_chain:
+          sample_atoms.append(sample_res['CA'])
+      sample_atoms = np.array(sample_atoms)
+      sample_atoms_coords = np.empty((1,3))
+      for atom in sample_atoms:
+        sample_atoms_coords = np.append(sample_atoms_coords, np.array([atom.get_coord()]), axis=0)
+
+      #calculate the euclidian distance of the common individual carbons (and then get the tmscore with that)
+      end1 = len(ref_atoms_coords)
+      end2 = len(sample_atoms_coords)
+      end = min(end1,end2)
+      if end1 > end2: 
+        who = 1 
+      elif end1 < end2: 
+        who = 2
+      else:
+        who = 0
+      i=0
+      distancia_euclidiana=[] #List with distances, used for total RMSD
+      for atom in ref_atoms_coords:
+          if i < end:
+            distancia_euclidiana.append((atom[0] - sample_atoms_coords[i][0]) * (atom[0] - sample_atoms_coords[i][0]) + (atom[1] - sample_atoms_coords[i][1]) * (atom[1] - sample_atoms_coords[i][1]) + (atom[2] - sample_atoms_coords[i][2]) * (atom[2] - sample_atoms_coords[i][2]))
+          i = i + 1
+          #Equivalent: sumatory of (Xip1 - Xip2)^2 where i = carbon index
+      distancia_euclidiana = np.array(distancia_euclidiana)
+      distancia_euclidiana = distancia_euclidiana.reshape(-1,1)
+      sum_lcommon = 0
+      d0_ltarget = 1.24 * np.cbrt(end2 - 15) - 1.8 #from the references
+      i = 0
+      len_dist = len(distancia_euclidiana) #it repeats with end, but just in case I have to make changes later
+      for i in range (len_dist):
+          sum_lcommon = sum_lcommon + (1 / (1 + pow(distancia_euclidiana[i]/d0_ltarget,2)))
+      tm_score = float((1/end2) * sum_lcommon)
+      tmscore_list.append(tm_score)
+      if not silent:
+        print(f"TM-score between {names[0]} + {names[j]}:")
+        print(str(tm_score)) #total tm-score between 0-1 according to formula
+      j += 1
+  return tmscore_list
 
 def molecular_weight(pdb):
   from Bio import SeqIO
