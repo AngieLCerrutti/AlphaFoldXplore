@@ -4,11 +4,12 @@ import alphafoldxplore as afx
 import os
 
 class prediction_results:
-    def __init__(self, a=None, b=None, c=0, d=None):
+    def __init__(self, a=None, b=None, c=0, d=None, e=None):
       self.name = a
       self.directory = b
       self.time = c
       self.machine_details = d
+      self.ptmscore = e
 
     def add_name(self, x):
       self.name = x
@@ -21,6 +22,9 @@ class prediction_results:
 
     def add_machine_details(self, x):
       self.machine_details = x
+
+    def add_ptmscore(self, x):
+      self.ptmscore = x
 
     def plot_pae(self, p2=None, substract=None): #p2 must be another prediction_results object or a dict
       afx.clean()
@@ -68,12 +72,15 @@ class prediction_results:
         else:
           plddt_dict = {}
           if isinstance(p2, dict): #is it a dict?
+            is_dict = True
             for p in p2.values():
               if p.name != self.name:
                 afx.extract_zip(p.directory)
                 names.append(p.name)
             plddt_dict = afx.get_plddt_files()
-            afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict, names=names)
+            results = afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict, names=names)
+            afx.clean()
+            return results
           else:
             print("P2 does not have the correct type. Defaulting to single unit.")
             plddt_dict = afx.get_pae_files()
@@ -83,15 +90,15 @@ class prediction_results:
         afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],names=names)
       afx.clean()
 
-    def fit(self, p2): #p2 is fit to p1
+    def fit(self, p2, silent=False): #p2 is fit to p1
       names = []
       names.append(self.name)
       dir_1, dir_2 = self.get_pdbs(p2)
       
       if isinstance(p2, type(self)):
-        new_directory = afx.superimpose_proteins(dir_1,dir_2)
+        new_directory = afx.superimpose_proteins(dir_1,dir_2, silent=silent)
         afx.clean()
-        os.system(f"zip -FS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
+        os.system(f"zip -qFS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
         return prediction_results(f"Superimposed {p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
       
       elif isinstance(p2, dict):
@@ -99,8 +106,8 @@ class prediction_results:
         i = 0
         for p in p2.values():
           if p.name != self.name:
-            new_directory = afx.superimpose_proteins(dir_1,dir_2[i])
-            os.system(f"zip -FS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
+            new_directory = afx.superimpose_proteins(dir_1,dir_2[i], silent=silent)
+            os.system(f"zip -qFS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
             superimposed_dict[p.name] = prediction_results(f"Superimposed {p.name}", f"{new_directory[:-4]}.zip") #a new file with the data
             i = i + 1
           else:
@@ -111,7 +118,7 @@ class prediction_results:
 
 
 
-    def rmsd(self, p2, start=0, end=0):
+    def rmsd(self, p2, start=0, end=0, silent=False):
       names = []
       names.append(self.name)
       dir_1, dir_2 = self.get_pdbs(p2)
@@ -121,7 +128,31 @@ class prediction_results:
             names.append(p.name)
       else:
         names.append(p2.name)
-      return afx.calc_individual_rmsd(dir_1, dir_2, start, end, names=names)
+      return afx.calc_individual_rmsd(dir_1, dir_2, start, end, names=names, returning="rmsd", silent=silent)
+
+    def aadistance(self, p2, start=0, end=0, silent=False):
+      names = []
+      names.append(self.name)
+      dir_1, dir_2 = self.get_pdbs(p2)
+      if isinstance(p2, dict):
+        for p in p2.values():
+          if p.name != self.name:
+            names.append(p.name)
+      else:
+        names.append(p2.name)
+      return afx.calc_individual_rmsd(dir_1, dir_2, start, end, names=names, returning="aadistance", silent=silent)
+
+    def tmscore(self, p2, silent=False):
+      names = []
+      names.append(self.name)
+      dir_1, dir_2 = self.get_pdbs(p2)
+      if isinstance(p2, dict):
+        for p in p2.values():
+          if p.name != self.name:
+            names.append(p.name)
+      else:
+        names.append(p2.name)
+      return afx.calc_tmscore(dir_1, dir_2, names=names, silent=silent)
 
     def get_pdbs(self, p2 = None): #not plddt nor pae
       afx.clean()
@@ -139,7 +170,6 @@ class prediction_results:
             ficheros = filter(os.path.isfile, os.scandir("pdb_files"))
             ficheros = [os.path.realpath(f) for f in ficheros] # add path to each file
             ficheros.sort(key=os.path.getmtime)
-            print(ficheros)
             dir_2 = ficheros
           else:
             print("P2 does not have the correct type. Defaulting to single unit.")
