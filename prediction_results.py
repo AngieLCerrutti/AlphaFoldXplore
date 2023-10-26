@@ -68,7 +68,10 @@ class prediction_results:
           afx.extract_zip(p2.directory)
           plddt_dict = afx.get_plddt_files()
           names.append(p2.name)
-          afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict[f'{p2.name}_unrelaxed.pdb'], names=names)
+          try:
+            afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict[f'{p2.name}_unrelaxed.pdb'], names=names)
+          except KeyError as error:
+            afx.plddt_results(plddt_dict[f'{self.name}_relaxed.pdb'],plddt_dict[f'{p2.name}_relaxed.pdb'], names=names)    
         else:
           plddt_dict = {}
           if isinstance(p2, dict): #is it a dict?
@@ -78,16 +81,25 @@ class prediction_results:
                 afx.extract_zip(p.directory)
                 names.append(p.name)
             plddt_dict = afx.get_plddt_files()
-            results = afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict, names=names)
+            try:
+              results = afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict, names=names)
+            except KeyError as error:
+              results = afx.plddt_results(plddt_dict[f'{self.name}_relaxed.pdb'],plddt_dict, names=names)
             afx.clean()
             return results
           else:
             print("P2 does not have the correct type. Defaulting to single unit.")
-            plddt_dict = afx.get_pae_files()
-            afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],names=names)
+            plddt_dict = afx.get_plddt_files()
+            try:
+              afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],names=names)
+            except KeyError as error:
+              afx.plddt_results(plddt_dict[f'{self.name}_relaxed.pdb'],names=names)
       else:
-        plddt_dict = afx.get_pae_files()
-        afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],names=names)
+        plddt_dict = afx.get_plddt_files()
+        try:
+          afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],names=names)
+        except KeyError as error:
+          afx.plddt_results(plddt_dict[f'{self.name}_relaxed.pdb'],names=names)
       afx.clean()
 
     def fit(self, p2, silent=False): #p2 is fit to p1
@@ -157,11 +169,17 @@ class prediction_results:
     def get_pdbs(self, p2 = None): #not plddt nor pae
       afx.clean()
       afx.extract_zip(self.directory)
-      dir_1 = f"pdb_files/{self.name}_unrelaxed.pdb"
+      if os.path.exists(f"pdb_files/{self.name}_unrelaxed.pdb"):
+      	dir_1 = f"pdb_files/{self.name}_unrelaxed.pdb"
+      else:
+      	dir_1 = f"pdb_files/{self.name}_relaxed.pdb"
       if p2:
         if isinstance(p2, type(self)):
           afx.extract_zip(p2.directory)
-          dir_2 = f"pdb_files/{p2.name}_unrelaxed.pdb"
+          if os.path.exists(f"pdb_files/{p2.name}_unrelaxed.pdb"):
+            dir_2 = f"pdb_files/{p2.name}_unrelaxed.pdb"
+          else:
+            dir_2 = f"pdb_files/{p2.name}_relaxed.pdb"
         else:
           if isinstance(p2, dict): #is it a dict?
             for p in p2.values():

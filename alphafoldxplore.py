@@ -782,7 +782,10 @@ def get_pae_files(dir = "json_files"): #returns a dict with pae data
   for fichero in ficheros:
     with open(fichero) as f:
       d=json.load(f)
-      dataf=(pd.DataFrame(d[0]["distance"]))
+      try:
+      	dataf=(pd.DataFrame(d[0]["distance"]))
+      except Exception as error:
+      	dataf=(pd.DataFrame(d["distance"])) #compatibility
       imagenes[os.path.basename(fichero)] = dataf
     f.close()
   return(imagenes)
@@ -838,6 +841,7 @@ def plddt_results(plddt1, plddt2 = 0, names=[]):
   label1 = names[0]
   if type(plddt2) == int: #no optional pLDDT file included
     plddt2_exist = False
+    is_dict = False
   else:
     plddt2_exist = True
     if isinstance(plddt2, dict):
