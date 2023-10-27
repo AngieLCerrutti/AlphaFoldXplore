@@ -817,6 +817,7 @@ def pae_results (pae1, pae2 = 0, names=[], substract=False):
         sns.heatmap(df2, cmap=cpalette, ax=ax2)
         ax2.yaxis.tick_right()
     else:
+      cpalette = "plasma"
       fig, (ax1) = plt.subplots(ncols=1)
     sns.heatmap(df1, cmap=cpalette  , ax=ax1)
     plt.show()
