@@ -55,6 +55,7 @@ class prediction_results:
             pae_dict = afx.get_pae_files()
             afx.pae_results(pae_dict[f'{self.name}_pae.json'], names=names)
       else:
+        pae_dict = afx.get_pae_files()
         afx.pae_results(pae_dict[f'{self.name}_pae.json'],names=names)
       afx.clean()
 
