@@ -10,7 +10,6 @@ else:
     import nglview
   except:
     pass
-import jax
 import subprocess
 import tqdm.notebook
 import json
@@ -120,6 +119,7 @@ def set_up():
     os.environ['PATH'] += ":/content/tmp/bin:/content/tmp/scripts"
 
 def predict(zfile): #FASTA path inputted
+  import jax #if this fails, predicion would never work either way
   protein_count = 0
   TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
   if sys.version_info[1] >= 10: #if python 3.10
