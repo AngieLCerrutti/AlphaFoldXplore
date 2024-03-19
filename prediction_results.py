@@ -112,7 +112,7 @@ class prediction_results:
         new_directory = afx.superimpose_proteins(dir_1,dir_2, silent=silent)
         afx.clean()
         os.system(f"zip -qFS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
-        return prediction_results(f"Superimposed {p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
+        return prediction_results(f"superimposed_{p2.name}", f"{new_directory[:-4]}.zip") #a new file with the data
       
       elif isinstance(p2, dict):
         superimposed_dict = {}
@@ -121,7 +121,7 @@ class prediction_results:
           if p.name != self.name:
             new_directory = afx.superimpose_proteins(dir_1,dir_2[i], silent=silent)
             os.system(f"zip -qFS \"{new_directory[:-4]}.zip\" \"{new_directory}\"")
-            superimposed_dict[p.name] = prediction_results(f"Superimposed {p.name}", f"{new_directory[:-4]}.zip") #a new file with the data
+            superimposed_dict[p.name] = prediction_results(f"superimposed_{p.name}", f"{new_directory[:-4]}.zip") #a new file with the data
             i = i + 1
           else:
             i = i + 1
