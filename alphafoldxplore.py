@@ -2,10 +2,13 @@
 
 import os
 from os import name
-try:
-  import nglview
-except:
-  pass
+if 'COLAB_GPU' in os.environ:
+  from google.colab import files #to download the predictions later if you're on Colab
+else: 
+  try:
+    import nglview
+  except:
+    pass
 import subprocess
 import json
 #-------------------
@@ -93,7 +96,7 @@ def predict(zfile): #FASTA path inputted
   zname = os.path.basename(zfile)
   zname = zname[:-6].replace(" ", "") #hopefully it had a fasta extension
   afxtname = f"{zname}_{dt_string}"
-  #from prediction_results import prediction_results
+  from prediction_results import prediction_results
   for sec in d.items():
     protein_count = protein_count + 1
     start = time.time()
