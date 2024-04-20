@@ -264,11 +264,12 @@ def predict(zfile): #FASTA path inputted
       file.write("version=afxl")
       file.close()
     os.system(f"cp '{pae_output_path}' '{output_dir}/{og_jobname}_pae.json'")
-    os.system(f"cp '{pred_output_path}' '{output_dir}/{og_jobname}_unrelaxed.json'")
+    os.system(f"cp '{pred_output_path}' '{output_dir}/{og_jobname}_unrelaxed.pdb'")
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
     #if 'COLAB_GPU' in os.environ:
       #files.download(f'{output_dir}.zip')
     indiv_predic_list.append(output_dir)
+    shutil_rmtree(result_dir)
     print(f"Protein {protein_name} finished, proceeding...")
     continue
 
