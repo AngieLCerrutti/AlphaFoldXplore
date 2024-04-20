@@ -2,16 +2,11 @@
 
 import os
 from os import name
-if 'COLAB_GPU' in os.environ:
-  from google.colab import files #to download the predictions later if you're on Colab
-else:
-  print('For best results install AlphaFoldXplore on a Colab machine.')
-  try:
-    import nglview
-  except:
-    pass
+try:
+  import nglview
+except:
+  pass
 import subprocess
-import tqdm.notebook
 import json
 #-------------------
 import sys
@@ -42,99 +37,42 @@ from datetime import datetime
 import shutil
 import prediction_results
 import re
+import hashlib
 os.makedirs("input", exist_ok=True)
 
 def set_up():
-  if 'COLAB_GPU' in os.environ:
-    import tensorflow as tf
-    tf.config.set_visible_devices([], 'GPU')
+  PYTHON_VERSION = python_version
 
-    import jax
-    if jax.local_devices()[0].platform == 'tpu':
-      raise RuntimeError('Colab TPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
-    elif jax.local_devices()[0].platform == 'cpu':
-      raise RuntimeError('Colab CPU runtime not supported. Change it to GPU via Runtime -> Change Runtime Type -> Hardware accelerator -> GPU.')
-      
-  import tqdm.notebook
+  if not os.path.isfile("COLABFOLD_READY"):
+    print("installing colabfold...")
+    os.system("pip install -q --no-warn-conflicts 'colabfold[alphafold-minus-jax] @ git+https://github.com/sokrypton/ColabFold'")
+    if os.environ.get('TPU_NAME', False) != False:
+      os.system("pip install -q --no-warn-conflicts -U dm-haiku==0.0.10 jax==0.3.25")
+    os.system("ln -s /usr/local/lib/python3.*/dist-packages/colabfold colabfold")
+    os.system("ln -s /usr/local/lib/python3.*/dist-packages/alphafold alphafold")
+    os.system("touch COLABFOLD_READY")
 
-  GIT_REPO = 'https://github.com/deepmind/alphafold'
-  SOURCE_URL = 'https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar'
-  PARAMS_DIR = './alphafold/data/params'
-  PARAMS_PATH = os.path.join(PARAMS_DIR, os.path.basename(SOURCE_URL))
-  TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
-  from IPython.utils import io
-  # if not already installed
-  try:
-    total = 55
-    with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
-      with io.capture_output() as captured:
-        if not os.path.isdir("alphafold"):
-          os.system("rm -rf alphafold")
-          os.system(f"git clone {GIT_REPO} alphafold")
-          os.system("cd alphafold; git checkout 1d43aaff941c84dc56311076b58795797e49107b --quiet")
+  if not os.path.isfile("CONDA_READY"):
+    print("installing conda...")
+    os.system("wget -qnc https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh")
+    os.system("bash Mambaforge-Linux-x86_64.sh -bfp /usr/local")
+    os.system("mamba config --set auto_update_conda false")
+    os.system("touch CONDA_READY")
 
-          # colabfold patches
-          os.system("mkdir --parents tmp")
-          os.system("wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/colabfold.py")
-          os.system("wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/pairmsa.py")
-          os.system("wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/protein.patch -P tmp/")
-          os.system("wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/config.patch -P tmp/")
-          os.system("wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/model.patch -P tmp/")
-          os.system("wget -qnc https://raw.githubusercontent.com/sokrypton/ColabFold/main/beta/modules.patch -P tmp/")
-
-          # install hhsuite
-          os.system("curl -fsSL https://github.com/soedinglab/hh-suite/releases/download/v3.3.0/hhsuite-3.3.0-SSE2-Linux.tar.gz | tar xz -C tmp/")
-
-          # Apply multi-chain patch from Lim Heo @huhlim
-          os.system("patch -u alphafold/alphafold/common/protein.py -i tmp/protein.patch")
-          
-          # Apply patch to dynamically control number of recycles (idea from Ryan Kibler)
-          os.system("patch -u alphafold/alphafold/model/model.py -i tmp/model.patch")
-          os.system("patch -u alphafold/alphafold/model/modules.py -i tmp/modules.patch")
-          os.system("patch -u alphafold/alphafold/model/config.py -i tmp/config.patch")
-          pbar.update(4)
-
-          os.system("pip3 install ./alphafold")
-          pbar.update(5)
-        
-          # speedup from kaczmarj
-          os.system(f"mkdir --parents \"{PARAMS_DIR}\"")
-          os.system(f"curl -fsSL \"{SOURCE_URL}\" | tar x -C \"{PARAMS_DIR}\"")
-          pbar.update(14+27)
-
-          ######################################################################
-          # Install py3dmol.
-          os.system("pip install py3dmol")
-          pbar.update(1)
-
-        else:
-          pbar.update(55)
-
-  except subprocess.CalledProcessError:
-    print(captured)
-    raise
-
-  ########################################################################################
-  if "/content/tmp/bin" not in os.environ['PATH']:
-    os.environ['PATH'] += ":/content/tmp/bin:/content/tmp/scripts"
+  if not os.path.isfile("HH_READY"):
+    print("installing hhsuite...")
+    os.system(f"mamba install -y -c conda-forge -c bioconda kalign2=2.04 hhsuite=3.3.0 python='{PYTHON_VERSION}'")
+    os.system("touch HH_READY")
+  if not os.path.isfile("AMBER_READY"):
+    #print("installing amber...")
+    #os.system(f"mamba install -y -c conda-forge openmm=7.7.0 python='{PYTHON_VERSION}' pdbfixer")
+    #os.system("touch AMBER_READY")
+    pass
 
 def predict(zfile): #FASTA path inputted
   import jax #if this fails, predicion would never work either way
   protein_count = 0
-  TQDM_BAR_FORMAT = '{l_bar}{bar}| {n_fmt}/{total_fmt} [elapsed: {elapsed} remaining: {remaining}]'
-  if sys.version_info[1] >= 10: #if python 3.10
-    import collections
-    collections.Iterable = collections.abc.Iterable #solve a compatibility issue
-  import colabfold as cf
-  from alphafold.data import pipeline
-  from alphafold.common import protein
-  from alphafold.data import parsers
-  import alphafold.model 
-  from alphafold.model import model
-  from alphafold.model import config
-  from alphafold.model import data
   from collections import defaultdict
-  from IPython.utils import io
   d = defaultdict(str)
   with open(zfile, "r") as file1:
     for line in file1:
@@ -144,25 +82,21 @@ def predict(zfile): #FASTA path inputted
             sequence= line.strip('\n')
             d[jobname[1:]] += sequence
   file1.close()
-  
   seque= []
   Z = {}
   indiv_predic_list=[]
   now = datetime.now()
   dt_string = now.strftime("%Y%m%d%H%M%S")
   zname = os.path.basename(zfile)
-  zname = zname[:-6].replace(" ", "")#hopefully it had a fasta extension
+  zname = zname[:-6].replace(" ", "") #hopefully it had a fasta extension
   afxtname = f"{zname}_{dt_string}"
-  from prediction_results import prediction_results
+  #from prediction_results import prediction_results
   for sec in d.items():
     protein_count = protein_count + 1
     start = time.time()
     import re
-
-    # define sequence
-    #sequence = "\"sequence\"" #@param {type:"string"}
-    #sequence = d.values()
-    sequence= (str(sec[1]))
+    #------------------------
+    sequence = (str(sec[1]))
     jobname = (sec[0])
     jobname = jobname.replace("/","") # forbidden characters
     jobname = jobname.replace("\\","")
@@ -174,447 +108,144 @@ def predict(zfile): #FASTA path inputted
     sequence = re.sub("^[:/]+","",sequence)
     sequence = re.sub("[:/]+$","",sequence)
 
-    #jobname = "ubiquitin" #@param {type:"string"}
-    #jobname=d.keys()
     jobname = re.sub(r'\W+', '', jobname)
 
-    # define number of copies
-    homooligomer =  "1"
-    homooligomer = re.sub("[:/]+",":",homooligomer)
-    homooligomer = re.sub("^[:/]+","",homooligomer)
-    homooligomer = re.sub("[:/]+$","",homooligomer)
-
-    if len(homooligomer) == 0: homooligomer = "1"
-    homooligomer = re.sub("[^0-9:]", "", homooligomer)
-    homooligomers = [int(h) for h in homooligomer.split(":")]
-
-    ori_sequence = sequence
-    sequence = sequence.replace("/","").replace(":","")
-    seqs = ori_sequence.replace("/","").split(":")
-    if len(seqs) != len(homooligomers):
-      if len(homooligomers) == 1:
-        homooligomers = [homooligomers[0]] * len(seqs)
-        homooligomer = ":".join([str(h) for h in homooligomers])
-      else:
-        while len(seqs) > len(homooligomers):
-          homooligomers.append(1)
-          homooligomers = homooligomers[:len(seqs)]
-          homooligomer = ":".join([str(h) for h in homooligomers])
-        print("WARNING: Mismatch between number of breaks ':' in 'sequence' and 'homooligomer' definition")
-
-    full_sequence = "".join([s*h for s,h in zip(seqs,homooligomers)])
-
-    # prediction directory
-    
-    output_dir ='prediction_'+sec[0].replace(" ", "")+'_'+cf.get_hash(full_sequence)[:5]
+    output_dir ='prediction_'+sec[0].replace(" ", "")
     output_dir = output_dir.replace("/","") # forbidden characters
     output_dir = output_dir.replace("\\","")
     os.makedirs(output_dir, exist_ok=True)
     # delete existing files in working directory
     for f in os.listdir(output_dir):
       os.remove(os.path.join(output_dir, f))
+  #------------------------------
+    display_images = False
 
-    MIN_SEQUENCE_LENGTH = 16
-    MAX_SEQUENCE_LENGTH = 2500
-    aatypes = set('ACDEFGHIKLMNPQRSTVWY')  # 20 standard aatypes
-    if not set(full_sequence).issubset(aatypes):
-      raise Exception(f'Input sequence contains non-amino acid letters: {set(sequence) - aatypes}. AlphaFold only supports 20 standard amino acids as inputs.')
-    if len(full_sequence) < MIN_SEQUENCE_LENGTH:
-      raise Exception(f'Input sequence is too short: {len(full_sequence)} amino acids, while the minimum is {MIN_SEQUENCE_LENGTH}')
-    if len(full_sequence) > MAX_SEQUENCE_LENGTH:
-      raise Exception(f'Input sequence is too long: {len(full_sequence)} amino acids, while the maximum is {MAX_SEQUENCE_LENGTH}. Please use the full AlphaFold system for long sequences.')
+    import sys
+    import warnings
+    warnings.simplefilter(action='ignore', category=FutureWarning)
+    from Bio import BiopythonDeprecationWarning
+    warnings.simplefilter(action='ignore', category=BiopythonDeprecationWarning)
+    from pathlib import Path
+    from colabfold.download import download_alphafold_params, default_data_dir
+    from colabfold.utils import setup_logging
+    from colabfold.batch import get_queries, run, set_model_type
+    from colabfold.plot import plot_msa_v2
 
-    if len(full_sequence) >= 600:
-      print(f"WARNING: For a typical Google-Colab-GPU (12G) session, the max guaranteed length is ~600 residues. You are at {len(full_sequence)}! Running Alphafold may cause crashes.")
+    import numpy as np
+    try:
+      K80_chk = os.popen('nvidia-smi | grep "Tesla K80" | wc -l').read()
+    except:
+      K80_chk = "0"
+      pass
+    if "1" in K80_chk:
+      print("WARNING: found GPU Tesla K80: limited to total length < 1000")
+      if "TF_FORCE_UNIFIED_MEMORY" in os.environ:
+        del os.environ["TF_FORCE_UNIFIED_MEMORY"]
+      if "XLA_PYTHON_CLIENT_MEM_FRACTION" in os.environ:
+        del os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"]
 
-    print(f"total_length: '{len(full_sequence)}'") 
-    print(f"working_directory: '{output_dir}'")    
-    
-    print(str(sec[1]))
-    
-    #for i in homooligomer:
-    outp = seque.append(f"working_directory: '{output_dir}'")
-    homo = seque.append(f"homooligomer: '{homooligomer}'")
-    full = seque.append(f"total_length: '{(full_sequence)}'")
-    full_len = seque.append(f"full_length: '{len(full_sequence)}'")
-  
-    msa_method = "mmseqs2" 
-    add_custom_msa = False 
-    msa_format = "fas" 
-    pair_mode = "unpaired" 
-    pair_cov = 50 
-    pair_qid = 20 
+    from colabfold.colabfold import plot_protein
+    from pathlib import Path
+    import matplotlib.pyplot as plt
 
-    # --- Search against genetic databases ---
-    os.makedirs('tmp', exist_ok=True)
-    msas, deletion_matrices = [],[]
+    # For some reason we need that to get pdbfixer to import
+    if f"/usr/local/lib/python{python_version}/site-packages/" not in sys.path:
+        sys.path.insert(0, f"/usr/local/lib/python{python_version}/site-packages/")
 
-    if add_custom_msa:
-      print(f"upload custom msa in '{msa_format}' format")
-      msa_dict = files.upload()
-      lines = msa_dict[list(msa_dict.keys())[0]].decode()
-    
-      # convert to a3m
-      with open(f"tmp/upload.{msa_format}","w") as tmp_upload:
-        tmp_upload.write(lines)
-      os.system(f"reformat.pl {msa_format} a3m tmp/upload.{msa_format} tmp/upload.a3m")
-      a3m_lines = open("tmp/upload.a3m","r").read()
+    def input_features_callback(input_features):
+      if display_images:
+        plot_msa_v2(input_features)
+        plt.show()
+        plt.close()
 
-      # parse
-      msa, mtx = parsers.parse_a3m(a3m_lines)
-      msas.append(msa)
-      deletion_matrices.append(mtx)
-
-      if len(msas[0][0]) != len(sequence):
-        raise ValueError("ERROR: the length of msa does not match input sequence")
-
-    if msa_method == "precomputed":
-      print("upload precomputed pickled msa from previous run")
-      pickled_msa_dict = files.upload()
-      msas_dict = pickle.loads(pickled_msa_dict[list(pickled_msa_dict.keys())[0]])
-      msas, deletion_matrices = (msas_dict[k] for k in ['msas', 'deletion_matrices'])
-
-    elif msa_method == "single_sequence":
-      if len(msas) == 0:
-        msas.append([sequence])
-        deletion_matrices.append([[0]*len(sequence)])
-
-    else:
-      seqs = ori_sequence.replace('/','').split(':')
-      _blank_seq = ["-" * len(seq) for seq in seqs]
-      _blank_mtx = [[0] * len(seq) for seq in seqs]
-      def _pad(ns,vals,mode):
-        if mode == "seq": _blank = _blank_seq.copy()
-        if mode == "mtx": _blank = _blank_mtx.copy()
-        if isinstance(ns, list):
-          for n,val in zip(ns,vals): _blank[n] = val
-        else: _blank[ns] = vals
-        if mode == "seq": return "".join(_blank)
-        if mode == "mtx": return sum(_blank,[])
-      if len(seqs) == 1 or "unpaired" in pair_mode:
-        # gather msas
-        if msa_method == "mmseqs2":
-          prefix = cf.get_hash("".join(seqs))
-          prefix = os.path.join('tmp',prefix)
-          print(f"running mmseqs2")
-          A3M_LINES = cf.run_mmseqs2(seqs, prefix, filter=True)
-
-        for n, seq in enumerate(seqs):
-          # tmp directory
-          prefix = cf.get_hash(seq)
-          prefix = os.path.join('tmp',prefix)
-
-          if msa_method == "mmseqs2":
-            # run mmseqs2
-            a3m_lines = A3M_LINES[n]
-            msa, mtx = parsers.parse_a3m(a3m_lines)
-            msas_, mtxs_ = [msa],[mtx]
-        
-          # pad sequences
-          for msa_,mtx_ in zip(msas_,mtxs_):
-            msa,mtx = [sequence],[[0]*len(sequence)]      
-            for s,m in zip(msa_,mtx_):
-              msa.append(_pad(n,s,"seq"))
-              mtx.append(_pad(n,m,"mtx"))
-
-            msas.append(msa)
-            deletion_matrices.append(mtx)
-
-  
-    num_relax = "None"
-    rank_by = "pLDDT"
-    use_turbo = True
-    max_msa = "64:128"
-    max_msa_clusters, max_extra_msa = [int(x) for x in max_msa.split(":")]
-
-    show_images = False
-
-    num_models = 1 #cambiar si se quiere usar más modelos de template para predicciones
-    use_ptm = True 
-    num_ensemble = 1 
-    max_recycles = 1 
-    tol = 0.1 
-    is_training = True 
-    num_samples = 1 
-    subsample_msa = True 
-    
-    save_pae_json = False
-    save_tmp_pdb = False
-
-
-    if use_ptm == False and rank_by == "pTMscore":
-      print("WARNING: models will be ranked by pLDDT, 'use_ptm' is needed to compute pTMscore")
-      rank_by = "pLDDT"
-
-    #############################
-    # delete old files
-    #############################
-    for f in os.listdir(output_dir):
-      if "rank_" in f:
-        os.remove(os.path.join(output_dir, f))
-
-    #############################
-    # homooligomerize
-    #############################
-    lengths = [len(seq) for seq in seqs]
-    msas_mod, deletion_matrices_mod = cf.homooligomerize_heterooligomer(msas, deletion_matrices,
-                                                                        lengths, homooligomers)
-    #############################
-    # define input features
-    #############################
-    def _placeholder_template_feats(num_templates_, num_res_):
-      return {
-          'template_aatype': np.zeros([num_templates_, num_res_, 22], np.float32),
-          'template_all_atom_masks': np.zeros([num_templates_, num_res_, 37, 3], np.float32),
-          'template_all_atom_positions': np.zeros([num_templates_, num_res_, 37], np.float32),
-          'template_domain_names': np.zeros([num_templates_], np.float32),
-          'template_sum_probs': np.zeros([num_templates_], np.float32),
-      }
-
-    num_res = len(full_sequence)
-    feature_dict = {}
-    feature_dict.update(pipeline.make_sequence_features(full_sequence, 'test', num_res))
-    feature_dict.update(pipeline.make_msa_features(msas_mod, deletion_matrices=deletion_matrices_mod))
-    if not use_turbo:
-      feature_dict.update(_placeholder_template_feats(0, num_res))
-
-    def do_subsample_msa(F, random_seed=0):
-      '''subsample msa to avoid running out of memory'''
-      N = len(F["msa"])
-      L = len(F["residue_index"])
-      N_ = int(3E7/L)
-      if N > N_:
-        print(f"whhhaaa... too many sequences ({N}) subsampling to {N_}")
-        np.random.seed(random_seed)
-        idx = np.append(0,np.random.permutation(np.arange(1,N)))[:N_]
-        F_ = {}
-        F_["msa"] = F["msa"][idx]
-        F_["deletion_matrix_int"] = F["deletion_matrix_int"][idx]
-        F_["num_alignments"] = np.full_like(F["num_alignments"],N_)
-        for k in ['aatype', 'between_segment_residues',
-                  'domain_name', 'residue_index',
-                  'seq_length', 'sequence']:
-                  F_[k] = F[k]
-        return F_
-      else:
-        return F
-
-    ################################
-    # set chain breaks
-    ################################
-    Ls = []
-    for seq,h in zip(ori_sequence.split(":"),homooligomers):
-      Ls += [len(s) for s in seq.split("/")] * h
-    Ls_plot = sum([[len(seq)]*h for seq,h in zip(seqs,homooligomers)],[])
-    feature_dict['residue_index'] = cf.chain_break(feature_dict['residue_index'], Ls)
-
-    ###########################
-    # run alphafold
-    ###########################
-    def parse_results(prediction_result, processed_feature_dict):
-      b_factors = prediction_result['plddt'][:,None] * prediction_result['structure_module']['final_atom_mask']  
-      dist_bins = jax.numpy.append(0,prediction_result["distogram"]["bin_edges"])
-      dist_mtx = dist_bins[prediction_result["distogram"]["logits"].argmax(-1)]
-      contact_mtx = jax.nn.softmax(prediction_result["distogram"]["logits"])[:,:,dist_bins < 8].sum(-1)
-
-      out = {"unrelaxed_protein": protein.from_prediction(processed_feature_dict, prediction_result, b_factors=b_factors),
-            "plddt": prediction_result['plddt'],
-            "pLDDT": prediction_result['plddt'].mean(),
-            "dists": dist_mtx,
-            "adj": contact_mtx}
-
-      if "ptm" in prediction_result:
-        out.update({"pae": prediction_result['predicted_aligned_error'],
-                    "pTMscore": prediction_result['ptm']})
-  
-      return out    
-  
-    model_names = ['model_1', 'model_2', 'model_3', 'model_4', 'model_5'][:num_models]
-    total = len(model_names) * num_samples
-    with tqdm.notebook.tqdm(total=total, bar_format=TQDM_BAR_FORMAT) as pbar:
-
-  
-      #######################################################################
-      # precompile model and recompile only if length changes
-      #######################################################################
-      if use_turbo:
-        name = "model_5_ptm" if use_ptm else "model_5"
-        N = len(feature_dict["msa"])
-        L = len(feature_dict["residue_index"])
-        compiled = (N, L, use_ptm, max_recycles, tol, num_ensemble, max_msa, is_training)
-        if "COMPILED" in dir():
-          if COMPILED != compiled: recompile = True
-        else: recompile = True
-        if recompile:
-          cf.clear_mem("gpu")
-          cfg = config.model_config(name)      
-
-          # set size of msa (to reduce memory requirements)
-          msa_clusters = min(N, max_msa_clusters)
-          cfg.data.eval.max_msa_clusters = msa_clusters
-          cfg.data.common.max_extra_msa = max(min(N-msa_clusters,max_extra_msa),1)
-
-          cfg.data.common.num_recycle = max_recycles
-          cfg.model.num_recycle = max_recycles
-          cfg.model.recycle_tol = tol
-          cfg.data.eval.num_ensemble = num_ensemble
-
-          params = data.get_model_haiku_params(name,'./alphafold/data')
-          model_runner = model.RunModel(cfg, params, is_training=is_training)
-          COMPILED = compiled
-          recompile = False
-
-      else:
-        cf.clear_mem("gpu")
-        recompile = True
-
-      # cleanup
-      if "outs" in dir(): del outs
-      outs = {}
-      cf.clear_mem("cpu")  
-
-      #######################################################################
-      def report(key):
-        pbar.update(n=1)
-        o = outs[key]
-        line = f"{key} recycles:{o['recycles']} tol:{o['tol']:.2f} pLDDT:{o['pLDDT']:.2f}"
-        if use_ptm: 
-          line += f" pTMscore:{o['pTMscore']:.2f}"
-          ptm = '{0:.2f}'.format(o['pTMscore'])
-        else:
-          ptm = 0
-        return ptm
-
-        print(line)
-        if show_images:
-          fig = cf.plot_protein(o['unrelaxed_protein'], Ls=Ls_plot, dpi=100)
+    def prediction_callback(protein_obj, length,
+                            prediction_result, input_features, mode):
+      model_name, relaxed = mode
+      if not relaxed:
+        if display_images:
+          fig = plot_protein(protein_obj, Ls=length, dpi=150)
           plt.show()
-        if save_tmp_pdb:
-          tmp_pdb_path = os.path.join(output_dir,f'unranked_{key}_{jobname}_unrelaxed.pdb')
-          pdb_lines = protein.to_pdb(o['unrelaxed_protein'])
-          with open(tmp_pdb_path, 'w') as f: f.write(pdb_lines)
+          plt.close()
 
-      if use_turbo:
-        # go through each random_seed
-        import warnings
-        with warnings.catch_warnings():
-          warnings.simplefilter(action='ignore', category=FutureWarning) #Jax is annoying so I temporarily do this. Version is specified either way
-          for seed in range(num_samples):
-          
-            # prep input features
-            if subsample_msa:
-              sampled_feats_dict = do_subsample_msa(feature_dict, random_seed=seed)    
-              processed_feature_dict = model_runner.process_features(sampled_feats_dict, random_seed=seed)
-            else:
-              processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
+    result_dir = jobname
+    log_filename = os.path.join(jobname,"log.txt")
+    setup_logging(Path(log_filename))
+    
+    queries_path = os.path.join(jobname, f"{jobname}.csv")
+    with open(queries_path, "w") as text_file:
+      text_file.write(f"id,sequence\n{jobname},{sequence}")
+    queries, is_complex = get_queries(queries_path)
+    model_type = "alphafold2_ptm"
+    model_type = set_model_type(is_complex, model_type)
 
-            # go through each model
-            for num, model_name in enumerate(model_names):
-              name = model_name+"_ptm" if use_ptm else model_name
-              key = f"{name}_seed_{seed}"
-              pbar.set_description(f'Running {key}')
+    if "multimer" in model_type and max_msa is not None:
+      use_cluster_profile = False
+    else:
+      use_cluster_profile = True
 
-              # replace model parameters
-              params = data.get_model_haiku_params(name, './alphafold/data')
-              for k in model_runner.params.keys():
-                model_runner.params[k] = params[k]
+    custom_template_path = None
+    use_templates = False
+    num_relax = 0
+    msa_mode = "mmseqs2_uniref_env"
+    num_recycles= 3
+    relax_max_iterations = None
+    recycle_early_stop_tolerance = None
+    num_seeds = 1
+    use_dropout = False
+    pair_mode = "unpaired"
+    pairing_strategy = "greedy"
+    dpi = 200 #not needed
+    save_all = False
+    save_recycles = False
+    save_to_google_drive = False
+    max_msa = None
 
-              # predict
-              prediction_result, (r, t) = cf.to(model_runner.predict(processed_feature_dict, random_seed=seed),"cpu")
-
-              # save results
-              outs[key] = parse_results(prediction_result, processed_feature_dict)
-              outs[key].update({"recycles":r, "tol":t})
-              ptm = report(key)
-              outs[key].update({"ptm":ptm})
-
-              del prediction_result, params
-            del sampled_feats_dict, processed_feature_dict
-
-      else:  
-        # go through each model
-        for num, model_name in enumerate(model_names):
-          name = model_name+"_ptm" if use_ptm else model_name
-          params = data.get_model_haiku_params(name, './alphafold/data')  
-          cfg = config.model_config(name)
-          cfg.data.common.num_recycle = cfg.model.num_recycle = max_recycles
-          cfg.model.recycle_tol = tol
-          cfg.data.eval.num_ensemble = num_ensemble
-          model_runner = model.RunModel(cfg, params, is_training=is_training)
-
-          # go through each random_seed
-          for seed in range(num_samples):
-            key = f"{name}_seed_{seed}"
-            pbar.set_description(f'Running {key}')
-            processed_feature_dict = model_runner.process_features(feature_dict, random_seed=seed)
-            prediction_result, (r, t) = cf.to(model_runner.predict(processed_feature_dict, random_seed=seed),"cpu")
-            outs[key] = parse_results(prediction_result, processed_feature_dict)
-            outs[key].update({"recycles":r, "tol":t})
-            ptm = report(key)
-            outs[key].update({"ptm":ptm})
-
-            # cleanup
-            del processed_feature_dict, prediction_result
-
-          del params, model_runner, cfg
-          cf.clear_mem("gpu")
-
-      # delete old files
-      for f in os.listdir(output_dir):
-        if "rank" in f:
-          os.remove(os.path.join(output_dir, f))
-
-      # Find the best model according to the mean pLDDT.
-      model_rank = list(outs.keys())
-      model_rank = [model_rank[i] for i in np.argsort([outs[x][rank_by] for x in model_rank])[::-1]]
-
-      # Write out the prediction
-      for n,key in enumerate(model_rank):
-        prefix = f"rank_{n+1}_{key}" 
-        pred_output_path = os.path.join(output_dir,f'{og_jobname}_unrelaxed.pdb')
-        #fig = cf.plot_protein(outs[key]["unrelaxed_protein"], Ls=Ls_plot, dpi=200)
-        #plt.savefig(os.path.join(output_dir,f'{prefix}.png'), bbox_inches = 'tight')
-        #plt.close(fig)
-
-        pdb_lines = protein.to_pdb(outs[key]["unrelaxed_protein"])
-        with open(pred_output_path, 'w') as f:
-          f.write(pdb_lines)
-        
-    ############################################################
-    print(f"model rank based on {rank_by}")
-
-    for n,key in enumerate(model_rank):    
-        pae = outs[key]["pae"]
-        ptm = outs[key]["ptm"]
-        max_pae = pae.max()
-        pae_output_path = os.path.join(output_dir,f'{og_jobname}_pae.json')
-        rounded_errors = np.round(np.array(pae), decimals= 1)
-        indices = np.indices((len(rounded_errors), len(rounded_errors))) + 1
-        indices_1 = indices[0].flatten().tolist()
-        indices_2 = indices[1].flatten().tolist()
-        pae_data = json.dumps([{
-            'residue1': indices_1,
-            'residue2': indices_2,
-            'distance': rounded_errors.tolist(),
-            'max_predicted_aligned_error': max_pae.item()
-        }],
-                                indent=None,
-                                separators=(',', ':'))
-
-        with open(pae_output_path, 'w') as f:
-          f.write(pae_data)
-
-    #shutil.make_archive(output_dir, "zip", os.getcwd())
-      #for n,key in enumerate(model_rank):
-      #print(f"rank_{n+1}_{key} {rank_by}:{outs[key][rank_by]:.2f}")
-
+    download_alphafold_params(model_type, Path("."))
+    results = run(
+        queries=queries,
+        result_dir=result_dir,
+        use_templates=use_templates,
+        custom_template_path=custom_template_path,
+        num_relax=num_relax,
+        msa_mode=msa_mode,
+        model_type=model_type,
+        num_models=1,
+        num_recycles=num_recycles,
+        relax_max_iterations=relax_max_iterations,
+        recycle_early_stop_tolerance=recycle_early_stop_tolerance,
+        num_seeds=num_seeds,
+        use_dropout=use_dropout,
+        model_order=[1,2,3,4,5],
+        is_complex=is_complex,
+        data_dir=Path("."),
+        keep_existing_results=False,
+        rank_by="auto",
+        pair_mode=pair_mode,
+        pairing_strategy=pairing_strategy,
+        stop_at_score=float(100),
+        prediction_callback=prediction_callback,
+        dpi=dpi,
+        zip_results=False,
+        save_all=save_all,
+        max_msa=max_msa,
+        use_cluster_profile=use_cluster_profile,
+        input_features_callback=input_features_callback,
+        save_recycles=save_recycles,
+        user_agent="colabfold/google-colab-main",
+    )
     stop = time.time()
     protein_name = str(og_jobname)
     directory = f'{afxtname}/{output_dir}.zip'
     time_spent = stop - start
+    import subprocess
     machine_info = subprocess.run(
         ["nvidia-smi", "--query-gpu=name,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used", "--format=csv,noheader"],
         encoding="utf-8", capture_output=True).stdout
+    import json
+    with open(os.path.join(result_dir,f'{jobname}_scores_rank_001_alphafold2_ptm_model_1_seed_000.json'),'r') as ptmstore:
+      ptm = json.load(ptmstore)['ptm']
+    pred_output_path = os.path.join(result_dir,f'{jobname}_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb')
+    pae_output_path = os.path.join(result_dir,f'{jobname}_predicted_aligned_error_v1.json')
     prediction_entry = prediction_results(protein_name,directory,time_spent,machine_info)
     Z[f'p{protein_count}'] = prediction_entry
 
@@ -623,15 +254,16 @@ def predict(zfile): #FASTA path inputted
       file.write(directory + '\n')
       file.write(str(time_spent) + '\n')
       file.write(machine_info)
-      file.write("pTMScore=" + ptm + '\n')
+      file.write("pTMScore=" + str(ptm) + '\n')
       file.write("version=afxl")
       file.close()
+    os.system(f"cp '{pae_output_path}' '{output_dir}/{og_jobname}_pae.json'")
+    os.system(f"cp '{pred_output_path}' '{output_dir}/{og_jobname}_unrelaxed.json'")
     os.system(f"zip -FSr {output_dir}.zip {output_dir}")
     #if 'COLAB_GPU' in os.environ:
       #files.download(f'{output_dir}.zip')
     indiv_predic_list.append(output_dir)
     print(f"Protein {protein_name} finished, proceeding...")
-    gc.collect() #free memory to be able to run further iterations
     continue
 
   with open(f'{afxtname}_list.txt', 'w', encoding='utf-8') as file:
