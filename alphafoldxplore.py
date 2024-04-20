@@ -39,8 +39,11 @@ import prediction_results
 import re
 import hashlib
 os.makedirs("input", exist_ok=True)
+from sys import version_info
+python_version = f"{version_info.major}.{version_info.minor}"
 
 def set_up():
+  
   PYTHON_VERSION = python_version
 
   if not os.path.isfile("COLABFOLD_READY"):
