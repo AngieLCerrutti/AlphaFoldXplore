@@ -269,7 +269,7 @@ def predict(zfile): #FASTA path inputted
     #if 'COLAB_GPU' in os.environ:
       #files.download(f'{output_dir}.zip')
     indiv_predic_list.append(output_dir)
-    shutil_rmtree(result_dir)
+    shutil.rmtree(result_dir)
     print(f"Protein {protein_name} finished, proceeding...")
     continue
 
