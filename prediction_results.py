@@ -66,13 +66,13 @@ class prediction_results:
       names.append(self.name)
       if p2:
         if isinstance(p2, type(self)):
-          afx.extract_zip(p2.directory)
+          dir_2 = afx.extract_zip(p2.directory)
           plddt_dict = afx.get_plddt_files()
           names.append(p2.name)
           try:
-            afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict[f'{p2.name}_unrelaxed.pdb'], names=names)
+            afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],plddt_dict[os.path.basename(dir_2)], names=names)
           except KeyError as error:
-            afx.plddt_results(plddt_dict[f'{self.name}_relaxed.pdb'],plddt_dict[f'{p2.name}_relaxed.pdb'], names=names)    
+            afx.plddt_results(plddt_dict[f'{self.name}_relaxed.pdb'],plddt_dict[os.path.basename(dir_2)], names=names)    
         else:
           plddt_dict = {}
           if isinstance(p2, dict): #is it a dict?
@@ -101,7 +101,6 @@ class prediction_results:
           afx.plddt_results(plddt_dict[f'{self.name}_unrelaxed.pdb'],names=names)
         except KeyError as error:
           afx.plddt_results(plddt_dict[f'{self.name}_relaxed.pdb'],names=names)
-      afx.clean()
 
     def fit(self, p2, silent=False): #p2 is fit to p1
       names = []
@@ -169,18 +168,10 @@ class prediction_results:
 
     def get_pdbs(self, p2 = None): #not plddt nor pae
       afx.clean()
-      afx.extract_zip(self.directory)
-      if os.path.exists(f"pdb_files/{self.name}_unrelaxed.pdb"):
-      	dir_1 = f"pdb_files/{self.name}_unrelaxed.pdb"
-      else:
-      	dir_1 = f"pdb_files/{self.name}_relaxed.pdb"
+      dir_1 = afx.extract_zip(self.directory)
       if p2:
         if isinstance(p2, type(self)):
-          afx.extract_zip(p2.directory)
-          if os.path.exists(f"pdb_files/{p2.name}_unrelaxed.pdb"):
-            dir_2 = f"pdb_files/{p2.name}_unrelaxed.pdb"
-          else:
-            dir_2 = f"pdb_files/{p2.name}_relaxed.pdb"
+          dir_2 = afx.extract_zip(p2.directory)
         else:
           if isinstance(p2, dict): #is it a dict?
             for p in p2.values():
@@ -194,7 +185,7 @@ class prediction_results:
             print("P2 does not have the correct type. Defaulting to single unit.")
             return dir_1
       else:
-      	return dir_1
+        return dir_1
       return dir_1, dir_2
 
     def view(self, p2 = 0):
