@@ -252,7 +252,7 @@ def predict(zfile): #FASTA path inputted
       ptm = json.load(ptmstore)['ptm']
     pred_output_path = os.path.join(result_dir,f'{jobname}_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb')
     pae_output_path = os.path.join(result_dir,f'{jobname}_predicted_aligned_error_v1.json')
-    prediction_entry = prediction_results(protein_name,directory,time_spent,machine_info,float(ptm))
+    prediction_entry = prediction_results(protein_name,directory,time_spent,machine_info,ptm)
     Z[f'p{protein_count}'] = prediction_entry
 
     with open(f'{output_dir}/{og_jobname}_report.txt', 'w', encoding='utf-8') as file:
@@ -330,9 +330,8 @@ def load(filedir):
                       pred_lines = pred_info.readlines()
                       ptm_line = pred_lines[4].strip().decode('UTF-8')
                       pred_info.close()
-                    #details = pred_lines.values()
                     try:
-                      ptmscore = float(re.findall(r"pTMScore=?([ \d.]+)",ptm_line)[0])
+                      ptmscore = float(re.findall(r"pTMScore=?([ \d.]+)",str(ptm_line))[0])
                     except:
                       ptmscore = 0
                     prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'),ptmscore)
@@ -402,7 +401,31 @@ def extract_zip(dir): #singular, zip string as parameter, must end in .zip
           fz.extract(zip_info, "json_files")         
         elif tab.endswith(".pdb"):
           zip_info.filename = os.path.basename(zip_info.filename)
-          fz.extract(zip_info, "pdb_files")
+          if zip_info.filename.endswith("_unrelaxed.pdb"):
+            extension = "_unrelaxed"
+            filename = zip_info.filename[:-14]
+          elif zip_info.filename.endswith("_relaxed.pdb"):
+            extension = "_relaxed"
+            filename = zip_info.filename[:-12]
+          else: 
+            extension = ""
+            filename = zip_info.filename[:-4]
+          if(os.path.exists(f"pdb_files/{filename}{extension}.pdb")):
+            #a clone!! it must be there for a reason
+            os.makedirs("pdb_files/tmp",exist_ok=True)
+            fz.extract(zip_info, "pdb_files/tmp")
+            iter_num = 2
+            while True:
+              if(os.path.exists(f"pdb_files/{filename}{extension}_{iter_num}.pdb")):
+                iter_num = iter_num + 1
+              else:
+                break
+            os.system(f"mv pdb_files/tmp/{filename}{extension}.pdb pdb_files/{filename}{extension}_{iter_num}.pdb")
+            shutil.rmtree("pdb_files/tmp")
+            return (f"pdb_files/{filename}{extension}_{iter_num}.pdb")
+          else:
+            fz.extract(zip_info, "pdb_files")
+            return (f"pdb_files/{filename}{extension}.pdb")
   else:
     print("Could not extract. Zip file not found")
 
