@@ -252,7 +252,7 @@ def predict(zfile): #FASTA path inputted
       ptm = json.load(ptmstore)['ptm']
     pred_output_path = os.path.join(result_dir,f'{jobname}_unrelaxed_rank_001_alphafold2_ptm_model_1_seed_000.pdb')
     pae_output_path = os.path.join(result_dir,f'{jobname}_predicted_aligned_error_v1.json')
-    prediction_entry = prediction_results(protein_name,directory,time_spent,machine_info)
+    prediction_entry = prediction_results(protein_name,directory,time_spent,machine_info,float(ptm))
     Z[f'p{protein_count}'] = prediction_entry
 
     with open(f'{output_dir}/{og_jobname}_report.txt', 'w', encoding='utf-8') as file:
@@ -328,11 +328,11 @@ def load(filedir):
                     #zip_info.filename = os.path.basename(zip_info.filename)
                     with fz.open(zip_info.filename) as pred_info:
                       pred_lines = pred_info.readlines()
-                      uncut_pred_lines = pred_info.read()
+                      ptm_line = pred_lines[4].strip().decode('UTF-8')
                       pred_info.close()
                     #details = pred_lines.values()
                     try:
-                      ptmscore = float(re.findall(r"pTMScore=?([ \d.]+)",uncut_pred_lines)[0])
+                      ptmscore = float(re.findall(r"pTMScore=?([ \d.]+)",ptm_line)[0])
                     except:
                       ptmscore = 0
                     prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'),ptmscore)
