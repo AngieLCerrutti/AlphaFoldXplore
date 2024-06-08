@@ -32,6 +32,8 @@ import Bio
 from Bio import PDB
 import ipywidgets as widget
 from Bio.PDB.PDBParser import PDBParser
+from Bio.PDB.MMCIFParser import MMCIFParser
+from Bio.PDB import PDBIO
 import math
 import numpy as np
 import gc #free memory resources, unrelated to AlphaFold
@@ -727,6 +729,75 @@ def run():
       i += 1
     else:
       raise Exception("Error: no valid file found. (is it on the appropiate folders?)")
+      
+def load_af3(name, location): #esto SOLAMENTE ES PARA LOS ZIPS DE ALPHAFOLD SERVER AKA AF3
+  from prediction_results import prediction_results
+  Z = {}
+  if os.path.exists(name):
+    print(f"Error: folder with the name '{name}' already exists on this folder. Please try another name or delete/rename the folder.")
+    return
+ 
+  folder = os.path.basename(location[:-4])
+  extract_folder = f'AF3_files/{folder}'
+  results_folder = f'AF3_files/{folder}_fx'
+  os.makedirs(results_folder, exist_ok=True)
+  with ZipFile(location,'r') as fz:
+    fz.extractall(extract_folder) #extract the af3 zip 
+              
+  for path in os.listdir(extract_folder):
+    long_path = os.path.join(extract_folder, path) #let's see all its files randomly
+    if long_path.endswith("_summary_confidences_0.json"): #this one has ptmscore. I use _0 for everything because nothing tells what's the best anyways
+      with open(long_path,'r') as file:
+        data = json.load(file)
+        ptmscore = float(data['ptm'])
+
+    if long_path.endswith("_model_0.cif"): #apparently this is a better pdb. I want the pdb anyways, we convert
+      file_parser = MMCIFParser() #biopython my beloved
+      structure = file_parser.get_structure("base",long_path)
+      #Write PDB
+      io = PDBIO()
+      io.set_structure(structure)
+      io.save(f'{results_folder}/{name}_relaxed.pdb') #I assume AF3 relaxes
+
+    if long_path.endswith("_full_data_0.json"): #PAE. pLDDT was on the CIF so thiis isn't as needed anymore
+      with open(long_path,'r') as file:
+        data = json.load(file)
+        distance = {"distance": data['pae']}
+        file.close()
+      with open(f'{results_folder}/{name}_pae.json', 'w', encoding='utf-8') as f: #rescuing pae alone
+        json.dump(distance, f, ensure_ascii=False)
+        f.close()
+
+  #a partir de aca es toda la misma magia negra que tiene después de generar archivos con todas las otras formas.
+  directory = f'{name}/{name}.zip' 
+  os.makedirs(f'{name}', exist_ok=True)
+  with open(f'{name}/{name}_report.txt', 'w', encoding='utf-8') as file:
+    file.write(name + '\n')
+    file.write(directory + '\n')
+    file.write("0" + '\n')
+    file.write("no info" + '\n')
+    file.write("pTMScore=" + str(ptmscore) + '\n')
+    file.write("version=af3")
+    file.close()
+  os.system(f"mv '{results_folder}/{name}_pae.json' '{name}/{name}_pae.json'")
+  os.system(f"mv '{results_folder}/{name}_relaxed.pdb' '{name}/{name}_relaxed.pdb'")
+
+  os.system(f"zip -FSr '{name}.zip' '{name}'")
+  shutil.rmtree(f'{name}')
+  prediction_entry = prediction_results(name,directory,"0","no info",ptmscore)
+  Z[f'p1'] = prediction_entry
+
+  os.makedirs(f'{name}', exist_ok=True) #la borre antes para purgar archivos
+  with open(f'{name}/{name}_list.txt', 'w', encoding='utf-8') as file:
+    for result in list(Z.values()):
+      file.write(f"{result.directory}\n")
+    file.close()
+  os.system(f"mv '{name}.zip' '{name}/'")
+  os.system(f"zip -FSr -D '{name}.zip' '{name}'")
+  os.system(f"mv '{name}.zip' '{name}.afxt'")
+  print(f"Stored on your local computer. Name: \"{name}.afxt'\"")
+  #shutil.rmtree(f'{name}')
+  return Z
 
 ###########################################################################
 ##The end user is not meant to use the following fuctions. For ease of simplification refer to the above ones
