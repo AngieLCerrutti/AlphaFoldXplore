@@ -30,6 +30,8 @@ import Bio
 from Bio import PDB
 import ipywidgets as widget
 from Bio.PDB.PDBParser import PDBParser
+from Bio.PDB.MMCIFParser import MMCIFParser
+from Bio.PDB import PDBIO
 import math
 import numpy as np
 import gc #free memory resources, unrelated to AlphaFold
