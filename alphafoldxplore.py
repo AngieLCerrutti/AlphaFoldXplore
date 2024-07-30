@@ -868,6 +868,8 @@ def clean(): #erases the folders by extract_zip and so. Meant to be used silentl
     shutil.rmtree('pdb_files')
   except:
     pass
+  os.makedirs("pdb_files",exist_ok=True)
+  os.makedirs("json_files",exist_ok=True)
 
 def get_pae_files(dir = "json_files"): #returns a dict with pae data
   ficheros = filter(os.path.isfile, os.scandir(dir))
