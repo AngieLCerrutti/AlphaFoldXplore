@@ -834,7 +834,31 @@ def extract_zip(dir): #singular, zip string as parameter, must end in .zip
           fz.extract(zip_info, "json_files")         
         elif tab.endswith(".pdb"):
           zip_info.filename = os.path.basename(zip_info.filename)
-          fz.extract(zip_info, "pdb_files")
+          if zip_info.filename.endswith("_unrelaxed.pdb"):
+            extension = "_unrelaxed"
+            filename = zip_info.filename[:-14]
+          elif zip_info.filename.endswith("_relaxed.pdb"):
+            extension = "_relaxed"
+            filename = zip_info.filename[:-12]
+          else: 
+            extension = ""
+            filename = zip_info.filename[:-4]
+          if(os.path.exists(f"pdb_files/{filename}{extension}.pdb")):
+            #a clone!! it must be there for a reason
+            os.makedirs("pdb_files/tmp",exist_ok=True)
+            fz.extract(zip_info, "pdb_files/tmp")
+            iter_num = 2
+            while True:
+              if(os.path.exists(f"pdb_files/{filename}{extension}_{iter_num}.pdb")):
+                iter_num = iter_num + 1
+              else:
+                break
+            os.system(f"mv pdb_files/tmp/{filename}{extension}.pdb pdb_files/{filename}{extension}_{iter_num}.pdb")
+            shutil.rmtree("pdb_files/tmp")
+            return (f"pdb_files/{filename}{extension}_{iter_num}.pdb")
+          else:
+            fz.extract(zip_info, "pdb_files")
+            return (f"pdb_files/{filename}{extension}.pdb")
   else:
     print("Could not extract. Zip file not found")
 
