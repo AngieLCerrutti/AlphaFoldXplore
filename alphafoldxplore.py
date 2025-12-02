@@ -55,9 +55,12 @@ def set_up():
     print("installing colabfold...")
     os.system("pip install -q --no-warn-conflicts 'colabfold[alphafold-minus-jax] @ git+https://github.com/sokrypton/ColabFold'")
     if os.environ.get('TPU_NAME', False) != False:
-      os.system("pip install -q --no-warn-conflicts -U dm-haiku==0.0.10 jax==0.3.25")
+      os.system("pip uninstall -y jax jaxlib")
+      os.system("pip install --no-warn-conflicts --upgrade dm-haiku==0.0.10 'jax[cuda12_pip]'==0.3.25 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html")
     os.system("ln -s /usr/local/lib/python3.*/dist-packages/colabfold colabfold")
     os.system("ln -s /usr/local/lib/python3.*/dist-packages/alphafold alphafold")
+    # hack to fix TF crash
+    os.system("rm -f /usr/local/lib/python3.*/dist-packages/tensorflow/core/kernels/libtfkernel_sobol_op.so")
     os.system("touch COLABFOLD_READY")
 
   if not os.path.isfile("CONDA_READY"):
@@ -152,7 +155,6 @@ def predict(zfile): #FASTA path inputted
       if "XLA_PYTHON_CLIENT_MEM_FRACTION" in os.environ:
         del os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"]
 
-    from colabfold.colabfold import plot_protein
     from pathlib import Path
     import matplotlib.pyplot as plt
 
@@ -171,7 +173,7 @@ def predict(zfile): #FASTA path inputted
       model_name, relaxed = mode
       if not relaxed:
         if display_images:
-          fig = plot_protein(protein_obj, Ls=length, dpi=150)
+          fig = (protein_obj, Ls=length, dpi=150)
           plt.show()
           plt.close()
 
