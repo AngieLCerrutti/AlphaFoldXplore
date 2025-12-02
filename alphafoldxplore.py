@@ -173,9 +173,7 @@ def predict(zfile): #FASTA path inputted
       model_name, relaxed = mode
       if not relaxed:
         if display_images:
-          fig = (protein_obj, Ls=length, dpi=150)
-          plt.show()
-          plt.close()
+          #no image
 
     result_dir = jobname
     log_filename = os.path.join(jobname,"log.txt")
