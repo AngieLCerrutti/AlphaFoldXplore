@@ -174,6 +174,7 @@ def predict(zfile): #FASTA path inputted
       if not relaxed:
         if display_images:
           #no image
+          pass
 
     result_dir = jobname
     log_filename = os.path.join(jobname,"log.txt")
