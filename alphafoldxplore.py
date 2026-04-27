@@ -28,7 +28,7 @@ from zipfile import ZipFile
 import matplotlib.pyplot as plt
 import Bio
 from Bio import PDB
-import ipywidgets as widget
+#import ipywidgets as widget
 from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB import PDBIO
