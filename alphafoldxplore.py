@@ -147,7 +147,7 @@ def predict(zfile): #FASTA path inputted
       K80_chk = os.popen('nvidia-smi | grep "Tesla K80" | wc -l').read()
     except:
       K80_chk = "0"
-      pass
+      
     if "1" in K80_chk:
       print("WARNING: found GPU Tesla K80: limited to total length < 1000")
       if "TF_FORCE_UNIFIED_MEMORY" in os.environ:
@@ -174,7 +174,7 @@ def predict(zfile): #FASTA path inputted
       if not relaxed:
         if display_images:
           #no image
-          pass
+          
 
     result_dir = jobname
     log_filename = os.path.join(jobname,"log.txt")
@@ -306,7 +306,7 @@ def load(filedir):
     fz.extractall(".")
   
   if os.path.isdir(extract_folder):
-    pass
+    
   else:
     os.system(f"cp -R prediction_{extract_folder} {extract_folder}") #compatibility with old afxt files
               
@@ -504,9 +504,12 @@ def extract_zip(dir): #singular, zip string as parameter, must end in .zip
 def clean(): #erases the folders by extract_zip and so. Meant to be used silently by the script.
   try:
     shutil.rmtree('json_files')
-    shutil.rmtree('pdb_files')
   except:
     pass
+  try:
+    shutil.rmtree('pdb_files')
+  except:
+    
 
 def get_pae_files(dir = "json_files"): #returns a dict with pae data
   ficheros = filter(os.path.isfile, os.scandir(dir))
