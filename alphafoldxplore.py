@@ -509,6 +509,7 @@ def clean(): #erases the folders by extract_zip and so. Meant to be used silentl
   try:
     shutil.rmtree('pdb_files')
   except:
+    pass
     
 
 def get_pae_files(dir = "json_files"): #returns a dict with pae data
