@@ -865,6 +865,9 @@ def extract_zip(dir): #singular, zip string as parameter, must end in .zip
 def clean(): #erases the folders by extract_zip and so. Meant to be used silently by the script.
   try:
     shutil.rmtree('json_files')
+  except:
+    pass
+  try:
     shutil.rmtree('pdb_files')
   except:
     pass
