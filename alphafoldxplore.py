@@ -329,12 +329,15 @@ def load(filedir):
                     #zip_info.filename = os.path.basename(zip_info.filename)
                     with fz.open(zip_info.filename) as pred_info:
                       pred_lines = pred_info.readlines()
-                      ptm_line = pred_lines[4].strip().decode('UTF-8')
+                      ptm_line = pred_lines[6].strip().decode('UTF-8')
                       pred_info.close()
                     try:
                       ptmscore = float(re.findall(r"pTMScore=?([ \d.]+)",str(ptm_line))[0])
                     except:
-                      ptmscore = 0
+                      try:
+                        ptmscore = float(re.findall(r"pTMScore=?([ \d.]+)",str(pred_lines[4].strip().decode('UTF-8')))[0]) #legacy ptmscore location
+                      except:
+                        ptmscore = 0
                     prediction_entry = prediction_results(pred_lines[0].strip().decode('UTF-8'),pred_lines[1].strip().decode('UTF-8'),pred_lines[2].strip().decode('UTF-8'),pred_lines[3].strip().decode('UTF-8'),ptmscore)
                     Z[f'p{protein_count}'] = prediction_entry
   print("Loaded successfully.")
