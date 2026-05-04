@@ -171,9 +171,6 @@ def predict(zfile): #FASTA path inputted
     def prediction_callback(protein_obj, length,
                             prediction_result, input_features, mode):
       model_name, relaxed = mode
-      if not relaxed:
-        if display_images:
-          #no image
           
 
     result_dir = jobname
