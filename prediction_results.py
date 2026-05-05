@@ -190,7 +190,26 @@ class prediction_results:
 
     def view(self, p2 = 0):
       if 'COLAB_GPU' in os.environ:
-        print('This command is not supported by Google Colab.')
+        #assume py3Dmol was installed with pip in colab        
+        import py3Dmol
+        view = py3Dmol.view()
+          
+        if type(p2) != int:
+          dir_1, dir_2 = self.get_pdbs(p2)
+          with open(dir_1, 'r') as p:
+            pdb_data = p.read()
+            view.addModel(pdb_data, 'pdb')
+          with open(dir_2, 'r') as p:
+            pdb_data = p.read()
+            view.addModel(pdb_data, 'pdb')
+        else:
+          dir_1 = self.get_pdbs()
+          with open(dir_1, 'r') as p:
+            pdb_data = p.read()
+            view.addModel(pdb_data, 'pdb')
+
+        view.setStyle({'cartoon': {'color': 'spectrum'}})
+        return view
       else:
         import nglview as nv
         if type(p2) != int:
