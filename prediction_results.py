@@ -224,5 +224,4 @@ class prediction_results:
     def get_molecular_weight(self):
       directory = self.get_pdbs()
       value = afx.molecular_weight(directory)
-      print(value)
       return value
